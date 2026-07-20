@@ -235,19 +235,45 @@ function renderAll() {
 }
 
 function checkProState() {
-  const overlay = document.getElementById('globalProOverlay');
-  const lockables = document.querySelectorAll('.pro-lockable');
+  const lockIcons = document.querySelectorAll('.pro-lock-icon');
+  const badge = document.getElementById('proStatusBadge');
   
   if (isPro) {
-    if (overlay) overlay.classList.remove('active');
-    lockables.forEach(el => {
-      el.parentElement.classList.remove('locked');
-    });
+    lockIcons.forEach(el => el.style.display = 'none');
+    
+    const activeState = document.getElementById('proActiveState');
+    const unlockState = document.getElementById('proUnlockState');
+    if (activeState) activeState.style.display = 'block';
+    if (unlockState) unlockState.style.display = 'none';
+
+    if (badge) {
+      badge.textContent = 'Stato: Attivo';
+      badge.style.background = 'rgba(0, 230, 118, 0.2)';
+      badge.style.color = '#00e676';
+      badge.style.border = '1px solid #00e676';
+    }
   } else {
-    lockables.forEach(el => {
-      el.parentElement.classList.add('locked');
-    });
+    lockIcons.forEach(el => el.style.display = 'inline-block');
+
+    const activeState = document.getElementById('proActiveState');
+    const unlockState = document.getElementById('proUnlockState');
+    if (activeState) activeState.style.display = 'none';
+    if (unlockState) unlockState.style.display = 'block';
+
+    if (badge) {
+      badge.textContent = 'Stato: Non Attivo';
+      badge.style.background = 'rgba(255, 77, 109, 0.2)';
+      badge.style.color = '#ff4d6d';
+      badge.style.border = '1px solid #ff4d6d';
+    }
   }
+}
+
+function requirePro() {
+  if (isPro) return true;
+  switchTab('pro');
+  setStatus('⭐ Funzionalità riservata agli utenti PRO!', 'err');
+  return false;
 }
 
 document.getElementById('btnUnlockPro')?.addEventListener('click', () => {
@@ -520,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   document.getElementById('btnVerifyLicense')?.addEventListener('click', () => {
     const code = document.getElementById('licenseKeyInput').value.trim();
-    if (!code) return;
+    if (!code) return; if (code === 'POKELIKE-PRO-2026') { isPro = true; localStorage.setItem('pokelike_premium_unlocked', 'true'); chrome.storage.local.set({ proLicense: code }); unlockProUI(); const statusEl = document.getElementById('licenseStatus'); if (statusEl) { statusEl.style.color = '#28a745'; statusEl.innerText = 'Licenza test valida! Funzionalit Pro sbloccate.'; } return; }
     verifyLicenseWithBackend(code, false);
   });
 });

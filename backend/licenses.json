@@ -5,6 +5,12 @@
       "accountId": "erpaffo",
       "createdAt": "2026-07-20T14:51:26.974Z",
       "provider": "Stripe"
+    },
+    "PRO-DE5D9F9F-1916": {
+      "valid": true,
+      "accountId": "erpaffo",
+      "createdAt": "2026-07-20T15:10:01.916Z",
+      "provider": "Stripe"
     }
   }
 }
