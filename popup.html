@@ -495,18 +495,18 @@
             <p style="color: #8b92a5;">Grazie per il supporto. Tutte le funzionalità sono sbloccate.</p>
           </div>
 
-          <div id="proUnlockState">
-            <a href="http://localhost:3000" target="_blank" class="btn btn-warning w-100 mb-3" style="font-weight: bold; background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000;">
-              Acquista o Recupera Licenza
-            </a>
-            
-            <label class="field-label mb-1">Hai già un codice?</label>
-            <div class="input-group mb-2">
-              <input type="text" id="licenseKeyInput" class="form-control bg-dark text-light border-secondary" placeholder="XXXX-XXXX-XXXX-XXXX">
-              <button class="btn btn-outline-warning" id="btnVerifyLicense">Attiva</button>
+            <div id="proUnlockState">
+              <button id="btnBuyPro" class="btn btn-warning w-100 mb-3" style="font-weight: bold; background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; border: none;">
+                Acquista Licenza PRO (Legata a questo Account)
+              </button>
+              
+              <label class="field-label mb-1">Hai già un codice?</label>
+              <div class="input-group mb-2">
+                <input type="text" id="licenseKeyInput" class="form-control bg-dark text-light border-secondary" placeholder="PRO-XXXX-XXXX">
+                <button class="btn btn-outline-warning" id="btnVerifyLicense">Attiva</button>
+              </div>
+              <div id="licenseStatus" style="font-size: 11px; text-align: center; min-height: 16px;"></div>
             </div>
-            <div id="licenseStatus" style="font-size: 11px; text-align: center; min-height: 16px;"></div>
-          </div>
         </div>
       </div>
 

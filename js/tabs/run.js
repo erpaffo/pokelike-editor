@@ -1,8 +1,8 @@
 import { currentRun, currentPokedollars, setCurrentPokedollars, autoSave } from '../state.js';
-import { requirePro } from '../api.js';
+import { requirePro } from '../ui.js';
 import { renderAll } from '../main.js';
 
-function renderRun() {
+export function renderRun() {
   document.getElementById('runMoney').value = currentPokedollars;
   if (!currentRun) return;
   

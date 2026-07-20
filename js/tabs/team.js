@@ -1,9 +1,10 @@
 import { currentRun, currentPokedollars, allPokemon, POKEMON_NAMES, autoSave } from '../state.js';
-import { isPro, requirePro } from '../api.js';
-import { getSpeciesData, getSprite, typeClass, hpColor, setStatus } from '../ui.js';
+import { isPro } from '../api.js';
+import { requirePro } from '../ui.js';
+import { typeClass, hpColor, setStatus } from '../ui.js';
 import { HELD_ITEMS } from '../constants.js';
 
-function renderTeam() {
+export function renderTeam() {
   const el = document.getElementById('contentTeam');
   if (!el || !currentRun) return;
   const team = currentRun.team || [];

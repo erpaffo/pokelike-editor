@@ -544,10 +544,13 @@ function getSpeciesData(id) {
 }
 
 function getSprite(id, shiny = false) {
-  const base = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
-  // IDs > 898 might not have sprites in PokeAPI, use a fallback
-  if (id > 898) {
+  const nameStr = POKEMON_NAMES_FALLBACK[id];
+  if (!nameStr) {
+    const base = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
     return shiny ? `${base}/shiny/${id}.png` : `${base}/${id}.png`;
   }
-  return shiny ? `${base}/shiny/${id}.png` : `${base}/${id}.png`;
+  
+  let cleanName = nameStr.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const base = shiny ? 'https://play.pokemonshowdown.com/sprites/ani-shiny' : 'https://play.pokemonshowdown.com/sprites/ani';
+  return `${base}/${cleanName}.gif`;
 }

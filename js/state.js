@@ -20,7 +20,7 @@ export function setCurrentStatsKey(v) { currentStatsKey = v; }
 export function setCurrentStats(v) { currentStats = v; }
 export function setSelectedAddPokemon(v) { selectedAddPokemon = v; }
 
-function buildAllPokemon() {
+export function buildAllPokemon() {
   const map = {};
   speciesList.forEach(s => {
     if (!s.id) return;
@@ -37,7 +37,7 @@ function buildAllPokemon() {
     .sort((a, b) => a.id - b.id);
 }
 
-function loadData() {
+export function loadData() {
   setStatus('Sincronizzazione in corso...', '');
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
@@ -103,7 +103,7 @@ function loadData() {
 }
 
 let saveTimer = null;
-function autoSave(showMessage = true) {
+export function autoSave(showMessage = true) {
   clearTimeout(saveTimer);
   if(showMessage && currentRun) setStatus('Salvataggio in corso...', '');
   

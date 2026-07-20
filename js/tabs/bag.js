@@ -2,7 +2,7 @@ import { currentRun, autoSave } from '../state.js';
 import { setStatus } from '../ui.js';
 import { HELD_ITEMS } from '../constants.js';
 
-function renderBag() {
+export function renderBag() {
   const list = document.getElementById('bagList');
   if (!list || !currentRun) return;
 

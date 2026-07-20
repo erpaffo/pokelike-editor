@@ -4,7 +4,7 @@ import { setStatus } from './ui.js';
 export let isPro = false;
 export function setIsPro(val) { isPro = val; }
 
-function verifyLicenseWithBackend(code, isSilent) {
+export function verifyLicenseWithBackend(code, isSilent) {
   const statusEl = document.getElementById('licenseStatus');
   if (!isSilent && statusEl) {
     statusEl.style.display = 'block';

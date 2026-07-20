@@ -1,4 +1,5 @@
-import { loadData, currentRun, allPokemon } from './state.js';
+import { currentRun, allPokemon } from './state.js';
+import { loadData } from './state.js';
 import { checkProState, switchTab, setStatus } from './ui.js';
 import { initTeamListeners } from './tabs/team.js';
 import { initRunListeners } from './tabs/run.js';
@@ -64,6 +65,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
+  document.getElementById('btnBuyPro')?.addEventListener('click', () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0];
+      if (!tab) return;
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => localStorage.getItem('poke_username') || localStorage.getItem('poke_save_uuid') || null
+      }, async (results) => {
+        const accountId = results[0]?.result;
+        if (!accountId) {
+          const statusEl = document.getElementById('licenseStatus');
+          if (statusEl) {
+            statusEl.style.color = '#ff4d6d';
+            statusEl.innerText = "Non sei loggato a Pokèlike. Apri il gioco e loggati prima di acquistare.";
+          }
+          return;
+        }
+
+        try {
+          const res = await fetch('http://localhost:3000/buy/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accountId })
+          });
+          const data = await res.json();
+          if (data.url) {
+            window.open(data.url, '_blank');
+          } else {
+            throw new Error(data.error || 'Errore di connessione a Stripe');
+          }
+        } catch (e) {
+          console.error(e);
+          const statusEl = document.getElementById('licenseStatus');
+          if (statusEl) {
+            statusEl.style.color = '#ff4d6d';
+            statusEl.innerText = "Impossibile avviare il checkout: " + e.message;
+          }
+        }
+      });
+    });
+  });
+
   document.getElementById('btnVerifyLicense')?.addEventListener('click', () => {
     const code = document.getElementById('licenseKeyInput').value.trim();
     if (!code) return;

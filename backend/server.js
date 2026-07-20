@@ -1,17 +1,21 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+const Stripe = require('stripe');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../landing-page')));
+
+// Se non è fornita, usiamo un fallback per evitare crash in fase di test
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock'); 
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock';
 
 const DB_PATH = path.join(__dirname, 'licenses.json');
 
-// Assicura che il mock DB esista
+// Assicura che il DB esista
 if (!fs.existsSync(DB_PATH)) {
   fs.writeFileSync(DB_PATH, JSON.stringify({ licenses: {} }, null, 2));
 }
@@ -25,47 +29,90 @@ function saveDB(data) {
 }
 
 function generateLicense() {
-  return 'PRO-' + uuidv4().split('-')[0].toUpperCase() + '-' + Date.now().toString().slice(-4);
+  return 'PRO-' + crypto.randomBytes(4).toString('hex').toUpperCase() + '-' + crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
-// ── ENDPOINTS DI PAGAMENTO (Mock Sandbox) ───────────────────────────────────
+// ── STRIPE WEBHOOK (DEVE ESSERE PRIMA DI express.json) ───────────────────────
 
-app.post('/buy/stripe', (req, res) => {
-  // Simulazione Stripe Checkout completato con successo
-  const db = getDB();
-  const code = generateLicense();
-  
-  db.licenses[code] = {
-    valid: true,
-    accountId: null, // Si legherà al primo utilizzo
-    createdAt: new Date().toISOString(),
-    provider: 'Stripe'
-  };
-  
-  saveDB(db);
-  
-  setTimeout(() => {
-    res.json({ success: true, licenseCode: code, message: "Pagamento Stripe Sandbox approvato" });
-  }, 1000);
+app.post('/webhook/stripe', express.raw({type: 'application/json'}), (request, response) => {
+  const sig = request.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+  } catch (err) {
+    console.error(`Webhook Error: ${err.message}`);
+    return response.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Gestione del pagamento completato
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const accountId = session.client_reference_id; // Leggiamo l'ID Account da Stripe!
+
+    if (accountId) {
+      const code = generateLicense();
+      const db = getDB();
+      
+      db.licenses[code] = {
+        active: true,
+        accountId: accountId, // Vincolo permanente automatico
+        createdAt: new Date().toISOString(),
+        provider: 'Stripe',
+        sessionId: session.id
+      };
+      
+      saveDB(db);
+      console.log(`✅ Licenza ${code} generata con successo per l'account ${accountId}!`);
+    } else {
+      console.error("⚠️ Pagamento ricevuto ma nessun client_reference_id (accountId) fornito!");
+    }
+  }
+
+  response.send();
 });
 
-app.post('/buy/paypal', (req, res) => {
-  // Simulazione PayPal Order Capture
-  const db = getDB();
-  const code = generateLicense();
+// Da qui in poi possiamo parsare JSON
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../landing-page')));
+
+// ── CHECKOUT ENDPOINT ─────────────────────────────────────────────────────────
+
+app.post('/buy/checkout', async (req, res) => {
+  const { accountId } = req.body;
   
-  db.licenses[code] = {
-    valid: true,
-    accountId: null,
-    createdAt: new Date().toISOString(),
-    provider: 'PayPal'
-  };
-  
-  saveDB(db);
-  
-  setTimeout(() => {
-    res.json({ success: true, licenseCode: code, message: "Pagamento PayPal Sandbox approvato" });
-  }, 1000);
+  if (!accountId) {
+    return res.status(400).json({ error: "Nessun Account ID fornito per vincolare la licenza." });
+  }
+
+  try {
+    // Creazione della sessione di Checkout
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: 'Pokélike Editor PRO (Licenza a vita)',
+              description: 'Sblocca starter leggendari perfetti, manipolazione della fortuna e costo zero.',
+              images: ['https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png'],
+            },
+            unit_amount: 999, // 9,99€
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      client_reference_id: accountId, // QUI leghiamo il pagamento all'utente!
+      success_url: 'http://localhost:3000/success.html',
+      cancel_url: 'http://localhost:3000/cancel.html',
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ── ENDPOINT DI VERIFICA (Estensione) ───────────────────────────────────────
@@ -77,26 +124,23 @@ app.post('/verify', (req, res) => {
   const db = getDB();
   const license = db.licenses[code];
 
+  // 1. Controllo Whitelist
   if (!license) {
     return res.status(400).json({ success: false, error: "Codice inesistente." });
   }
 
-  if (!license.valid) {
+  if (!license.active && license.valid === false) {
     return res.status(400).json({ success: false, error: "Codice disabilitato o revocato." });
   }
 
-  if (license.accountId && license.accountId !== accountId) {
-    // Il codice è già legato a un altro account
+  // 2. Controllo Account Vincolato
+  // A differenza di prima, non ci leghiamo al primo utilizzo se è vuoto, 
+  // perché ora lo leghiamo GIA' IN FASE DI ACQUISTO (Stripe Webhook o generate_codes.js).
+  if (license.accountId !== accountId) {
     return res.status(400).json({ 
       success: false, 
-      error: "Questo codice è già in uso da un altro account Pokelike." 
+      error: "Questo codice appartiene a un altro account Pokélike!" 
     });
-  }
-
-  if (!license.accountId) {
-    // Primo utilizzo, leghiamolo!
-    license.accountId = accountId;
-    saveDB(db);
   }
 
   // Se arriviamo qui, il codice è valido e appartiene all'account giusto

@@ -1,9 +1,9 @@
 import { currentStats, autoSave } from '../state.js';
-import { requirePro } from '../api.js';
+import { requirePro } from '../ui.js';
 import { setStatus } from '../ui.js';
 import { MEGA_UNLOCKS, baseFormStarters, legendaryStarters } from '../constants.js';
 
-function renderMega() {
+export function renderMega() {
   const sel = document.getElementById('megaUnlockSelect');
   if (!sel) return;
   if (sel.children.length === 0) {
