@@ -1,290 +1,825 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Pokélike Editor PRO</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --red: #e63946; --red-dark: #b71c1c; --red-light: #ff4d6d;
-    --bg: #0f111a; --surface: #1a1d2e; --card: #22263b;
-    --accent: #ff0055; --gold: #ffd700; --gold-dark: #ccaa00;
-    --text: #ffffff; --text-muted: #8b92a5;
-    --border: rgba(255, 255, 255, 0.08);
-    --green: #00e676;
-    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pokélike Editor PRO</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --red: #e63946;
+        --red-dark: #b71c1c;
+        --red-light: #ff4d6d;
+        --bg: #0f111a;
+        --surface: #1a1d2e;
+        --card: #22263b;
+        --accent: #ff0055;
+        --gold: #ffd700;
+        --gold-dark: #ccaa00;
+        --text: #ffffff;
+        --text-muted: #8b92a5;
+        --border: rgba(255, 255, 255, 0.08);
+        --green: #00e676;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+      }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    width: 480px; height: 600px; display: flex; flex-direction: column;
-    background-color: var(--bg);
-    background-image: radial-gradient(circle at 50% 0%, rgba(255, 215, 0, 0.03) 0%, transparent 50%);
-    color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; overflow: hidden;
-  }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        width: 480px;
+        height: 600px;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg);
+        background-image: radial-gradient(
+          circle at 50% 0%,
+          rgba(255, 215, 0, 0.03) 0%,
+          transparent 50%
+        );
+        color: var(--text);
+        font-family: "Inter", sans-serif;
+        font-size: 13px;
+        overflow: hidden;
+      }
 
-  /* ── Header ── */
-  .header {
-    flex-shrink: 0; background: rgba(26, 29, 46, 0.7); backdrop-filter: blur(10px);
-    padding: 16px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border);
-  }
-  .header-icon { font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
-  .header h1 { font-size: 16px; font-weight: 800; background: linear-gradient(90deg, #fff, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .header-sub { font-size: 11px; color: var(--gold); font-weight: 700; }
-  .btn-reload { margin-left: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; font-weight: 600; }
-  .btn-reload:hover { background: rgba(255,255,255,0.1); }
+      /* ── Header ── */
+      .header {
+        flex-shrink: 0;
+        background: rgba(26, 29, 46, 0.7);
+        backdrop-filter: blur(10px);
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .header-icon {
+        font-size: 24px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+      }
+      .header h1 {
+        font-size: 16px;
+        font-weight: 800;
+        background: linear-gradient(90deg, #fff, #ffd700);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .header-sub {
+        font-size: 11px;
+        color: var(--gold);
+        font-weight: 700;
+      }
+      .btn-reload {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .btn-reload:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
 
-  /* ── Tabs ── */
-  .tabs { flex-shrink: 0; display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 10px; }
-  .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; position: relative; }
-  .tab::after { content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); width: 0; height: 2px; background: var(--gold); transition: width 0.3s; }
-  .tab.active { color: var(--text); }
-  .tab.active::after { width: 100%; box-shadow: 0 -2px 10px rgba(255, 215, 0, 0.5); }
+      /* ── Tabs ── */
+      .tabs {
+        flex-shrink: 0;
+        display: flex;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 0 10px;
+      }
+      .tab {
+        flex: 1;
+        padding: 12px;
+        text-align: center;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        border-bottom: 2px solid transparent;
+        position: relative;
+      }
+      .tab::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 2px;
+        background: var(--gold);
+        transition: width 0.3s;
+      }
+      .tab.active {
+        color: var(--text);
+      }
+      .tab.active::after {
+        width: 100%;
+        box-shadow: 0 -2px 10px rgba(255, 215, 0, 0.5);
+      }
 
-  /* ── Content Area ── */
-  .scroll-region { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; display: flex; flex-direction: column; position: relative; }
-  .scroll-region::-webkit-scrollbar { width: 6px; }
-  .scroll-region::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-  .content { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.3s; height: 100%; }
-  .content.active { display: flex; flex: 1 0 auto; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+      /* ── Content Area ── */
+      .scroll-region {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+      .scroll-region::-webkit-scrollbar {
+        width: 6px;
+      }
+      .scroll-region::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+      }
+      .content {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+        animation: fadeIn 0.3s;
+        height: 100%;
+      }
+      .content.active {
+        display: flex;
+        flex: 1 0 auto;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
 
-  /* ── Footer ── */
-  .footer { flex-shrink: 0; padding: 10px 20px; background: rgba(26, 29, 46, 0.9); border-top: 1px solid var(--border); display: flex; }
-  .status { font-size: 12px; font-weight: 500; color: var(--text-muted); flex: 1; }
-  .status.ok  { color: var(--green); }
-  .status.err { color: var(--red-light); }
+      /* ── Footer ── */
+      .footer {
+        flex-shrink: 0;
+        padding: 10px 20px;
+        background: rgba(26, 29, 46, 0.9);
+        border-top: 1px solid var(--border);
+        display: flex;
+      }
+      .status {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+        flex: 1;
+      }
+      .status.ok {
+        color: var(--green);
+      }
+      .status.err {
+        color: var(--red-light);
+      }
 
-  /* ── Buttons ── */
-  .btn { padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-  .btn:active { transform: scale(0.97); }
-  .btn-primary { background: linear-gradient(135deg, var(--red), var(--accent)); color: #fff; }
-  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
-  .btn-ghost:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
-  .btn-pro { background: linear-gradient(135deg, #2a2d45, #1a1d2e); border: 1px solid var(--gold-dark); color: var(--gold); }
-  .btn-pro:hover { box-shadow: 0 0 10px rgba(255,215,0,0.2); }
+      /* ── Buttons ── */
+      .btn {
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--red), var(--accent));
+        color: #fff;
+      }
+      .btn-ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+      }
+      .btn-ghost:hover {
+        border-color: rgba(255, 255, 255, 0.3);
+        color: var(--text);
+      }
+      .btn-pro {
+        background: linear-gradient(135deg, #2a2d45, #1a1d2e);
+        border: 1px solid var(--gold-dark);
+        color: var(--gold);
+      }
+      .btn-pro:hover {
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+      }
 
-  /* ── Forms ── */
-  .field-row { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
-  .field-label { font-size: 12px; font-weight: 500; color: var(--text-muted); flex-shrink: 0; }
-  .field-input { background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; }
-  .field-input:focus { outline: none; border-color: var(--accent); }
-  
-  /* ── Modals & PRO ── */
-  .pro-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 17, 26, 0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 100; }
-  .pro-overlay.active { display: flex; }
-  .pro-modal { background: var(--surface); border: 1px solid var(--gold-dark); padding: 24px; border-radius: var(--radius-lg); text-align: center; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-  .pro-modal h3 { color: var(--gold); font-size: 18px; margin-bottom: 8px; }
-  .pro-modal p { color: var(--text-muted); font-size: 12px; margin-bottom: 16px; }
-  .pro-error { color: var(--red-light); font-size: 11px; margin-top: 8px; height: 14px; }
-  .pro-lockable { transition: filter 0.3s; }
-  .locked .pro-lockable { filter: blur(4px); pointer-events: none; user-select: none; }
+      /* ── Forms ── */
+      .field-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+      .field-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+      .field-input {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 8px 10px;
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        font-family: inherit;
+      }
+      .field-input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
 
-  /* ── Team Tab ── */
-  .poke-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; position: relative; margin-bottom: 12px; }
-  .poke-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .poke-sprite { width: 50px; height: 50px; image-rendering: pixelated; }
-  .poke-info { flex: 1; }
-  .poke-name { font-size: 15px; font-weight: 700; }
-  .btn-remove { position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--red-light); cursor: pointer; }
-  .btn-edit { position: absolute; top: 12px; right: 40px; background: transparent; border: none; color: var(--gold); cursor: pointer; font-size: 16px; }
-  
-  /* Advanced Stats Panel */
-  .adv-stats-panel { background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); padding: 12px; margin-top: 12px; display: none; border: 1px solid var(--border); }
-  .adv-stats-panel.active { display: block; animation: fadeIn 0.2s; }
-  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
-  .stat-group { display: flex; flex-direction: column; gap: 4px; }
-  .stat-group label { font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
-  .stat-group input { padding: 6px; width: 100%; text-align: center; }
+      /* ── Modals & PRO ── */
+      .pro-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 17, 26, 0.85);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+      .pro-overlay.active {
+        display: flex;
+      }
+      .pro-modal {
+        background: var(--surface);
+        border: 1px solid var(--gold-dark);
+        padding: 24px;
+        border-radius: var(--radius-lg);
+        text-align: center;
+        width: 90%;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
+      .pro-modal h3 {
+        color: var(--gold);
+        font-size: 18px;
+        margin-bottom: 8px;
+      }
+      .pro-modal p {
+        color: var(--text-muted);
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+      .pro-error {
+        color: var(--red-light);
+        font-size: 11px;
+        margin-top: 8px;
+        height: 14px;
+      }
+      .pro-lockable {
+        transition: filter 0.3s;
+      }
+      .locked .pro-lockable {
+        filter: blur(4px);
+        pointer-events: none;
+        user-select: none;
+      }
 
-  /* ── Sections ── */
-  .section { background: var(--card); border: 1px solid var(--border); padding: 16px; border-radius: var(--radius-md); margin-bottom: 12px; }
-  .section-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+      /* ── Team Tab ── */
+      .poke-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        position: relative;
+        margin-bottom: 12px;
+      }
+      .poke-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .poke-sprite {
+        width: 50px;
+        height: 50px;
+        image-rendering: pixelated;
+      }
+      .poke-info {
+        flex: 1;
+      }
+      .poke-name {
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .btn-remove {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: transparent;
+        border: none;
+        color: var(--red-light);
+        cursor: pointer;
+      }
+      .btn-edit {
+        position: absolute;
+        top: 12px;
+        right: 40px;
+        background: transparent;
+        border: none;
+        color: var(--gold);
+        cursor: pointer;
+        font-size: 16px;
+      }
 
-  /* ── Add Tab ── */
-  .search-input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: var(--radius-md); }
-  .pokemon-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; overflow-y: auto; flex:1; }
-  .pokemon-option { background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); padding: 8px; text-align: center; cursor: pointer; }
+      /* Advanced Stats Panel */
+      .adv-stats-panel {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--radius-sm);
+        padding: 12px;
+        margin-top: 12px;
+        display: none;
+        border: 1px solid var(--border);
+      }
+      .adv-stats-panel.active {
+        display: block;
+        animation: fadeIn 0.2s;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .stat-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .stat-group label {
+        font-size: 10px;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .stat-group input {
+        padding: 6px;
+        width: 100%;
+        text-align: center;
+      }
 
-  /* ── Utility Classes ── */
-  .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
-  .w-100 { width: 100%; }
-</style>
-</head>
-<body>
+      /* ── Sections ── */
+      .section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        padding: 16px;
+        border-radius: var(--radius-md);
+        margin-bottom: 12px;
+      }
+      .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 8px;
+      }
 
-<div class="header">
-  <div class="header-icon">✨</div>
-  <div>
-    <h1>Pokélike Editor</h1>
-    <div class="header-sub">Advanced Save Manager</div>
-  </div>
-  <button class="btn-reload" id="btnReload">🔄 Sync</button>
-</div>
+      /* ── Add Tab ── */
+      .search-input {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 10px;
+        border-radius: var(--radius-md);
+      }
+      .pokemon-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        overflow-y: auto;
+        flex: 1;
+      }
+      .pokemon-option {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: var(--radius-sm);
+        padding: 8px;
+        text-align: center;
+        cursor: pointer;
+      }
 
-<div class="tabs">
-  <div class="tab active" data-tab="team">🏆 Squadra</div>
-  <div class="tab" data-tab="run">🗺️ Run</div>
-  <div class="tab" data-tab="bag">🎒 Zaino</div>
-  <div class="tab" data-tab="mega">💠 Sblocchi</div>
-  <div class="tab" data-tab="add">➕ Aggiungi</div>
-</div>
-
-<div class="scroll-region">
-  
-  <!-- GLOBAL PRO OVERLAY -->
-  <div id="globalProOverlay" class="pro-overlay">
-    <div class="pro-modal">
-      <h3>👑 Sblocca Pokélike PRO</h3>
-      <p>L'accesso alle impostazioni avanzate della Run, dello Zaino e delle Statistiche richiede una licenza PRO.<br><br><small>(Codice di test: <b>POKELIKE-PRO-2026</b>)</small></p>
-      <input type="text" id="licenseKey" class="field-input w-100" style="text-align:center; font-weight:bold;" placeholder="XXXX-XXXX-XXXX">
-      <button class="btn btn-primary w-100" id="btnUnlockPro" style="margin-top:12px;">Verifica Licenza</button>
-      <p class="pro-error" id="proError"></p>
+      /* ── Utility Classes ── */
+      .empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-muted);
+      }
+      .w-100 {
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-icon">✨</div>
+      <div>
+        <h1>Pokélike Editor</h1>
+        <div class="header-sub">Advanced Save Manager</div>
+      </div>
+      <button class="btn-reload" id="btnReload">🔄 Sync</button>
     </div>
-  </div>
 
-  <!-- TAB: TEAM -->
-  <div class="content active" id="contentTeam">
-    <div class="empty"><p>Sincronizzazione in corso...</p></div>
-  </div>
-
-  <!-- TAB: RUN -->
-  <div class="content" id="contentRun">
-    <div class="pro-lockable">
-      <div class="section">
-        <div class="section-title">💰 Finanze & Base</div>
-        <div class="field-row">
-          <label class="field-label" style="width:100px;">Pokédollars:</label>
-          <input type="number" id="runMoney" class="field-input" style="flex:1;">
-        </div>
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-top:8px;">
-          <button class="btn btn-pro btn-money" data-amt="1000">+ 1.000 ₽</button>
-          <button class="btn btn-pro btn-money" data-amt="5000">+ 5.000 ₽</button>
-          <button class="btn btn-pro btn-money" data-amt="10000">+ 10.000 ₽</button>
-          <button class="btn btn-pro btn-money" data-amt="-1000">- 1.000 ₽</button>
-          <button class="btn btn-pro btn-money" data-amt="-5000">- 5.000 ₽</button>
-          <button class="btn btn-pro btn-money" data-amt="-10000">- 10.000 ₽</button>
-        </div>
-        <div class="field-row" style="margin-top:16px;">
-          <label class="field-label" style="width:100px;">Medaglie:</label>
-          <input type="number" id="runBadges" class="field-input" style="flex:1;">
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">🗺️ Progressione</div>
-        <div class="field-row">
-          <label class="field-label" style="width:100px;">Mappa N.:</label>
-          <input type="number" id="runMap" class="field-input" style="flex:1;">
-        </div>
-        <div class="field-row" style="margin-top: 16px;">
-          <label style="display:flex; align-items:center; gap:8px; width:100%;">
-            <input type="checkbox" id="runNuzlocke"> Modalità Nuzlocke (Morte Permanente)
-          </label>
-        </div>
-        <div class="field-row">
-          <label style="display:flex; align-items:center; gap:8px; width:100%;">
-            <input type="checkbox" id="runEndless"> Modalità Endless
-          </label>
-        </div>
-        <div class="field-row" id="endlessStageRow" style="display:none;">
-          <label class="field-label" style="width:100px;">Ondata Endless:</label>
-          <input type="number" id="runEndlessStage" class="field-input" style="flex:1;">
-        </div>
-      </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="team">🏆 Squadra</div>
+      <div class="tab" data-tab="run">🗺️ Run</div>
+      <div class="tab" data-tab="bag">🎒 Zaino</div>
+      <div class="tab" data-tab="mega">💠 Sblocchi</div>
+      <div class="tab" data-tab="add">➕ Aggiungi</div>
     </div>
-  </div>
 
-  <!-- TAB: BAG -->
-  <div class="content" id="contentBag">
-    <div class="pro-lockable">
-      <div class="section">
-        <div class="section-title">➕ Genera Strumento</div>
-        <div class="field-row">
-          <select id="bagItemSelect" class="field-input" style="flex:1;">
-            <option value="rare_candy">Caramella Rara</option>
-            <option value="tm_normal">TM (Livello Mosse)</option>
-            <option value="moon_stone">Pietra Lunare</option>
-            <option value="lucky_egg">Fortunuovo</option>
-            <option value="choice_band">Bendascelta</option>
-            <option value="rocky_helmet">Bitorzolelmo</option>
-            <option value="leftovers">Avanzi</option>
-            <option value="charcoal">Carbonella</option>
-            <option value="miracle_seed">Miracolseme</option>
-            <option value="hard_stone">Pietradura</option>
-            <option value="silk_scarf">Sciarpa Seta</option>
-            <option value="pixie_plate">Lastrafata</option>
-            <option value="mystic_water">Acquamagica</option>
-            <option value="magnet">Calamita</option>
-            <option value="black_belt">Cinturanera</option>
-            <option value="poison_barb">Velenaculeo</option>
-            <option value="soft_sand">Sabbia Soffice</option>
-            <option value="sharp_beak">Beccaffilato</option>
-            <option value="twisted_spoon">Cucchiaio Torto</option>
-            <option value="silver_powder">Argentopolvere</option>
-            <option value="spell_tag">Spettrotarga</option>
-            <option value="dragon_fang">Dentedidrago</option>
-            <option value="black_glasses">Occhialineri</option>
-            <option value="metal_coat">Metalcoperta</option>
-            <option value="never_melt_ice">Gelomai</option>
-          </select>
-          <button class="btn btn-pro" id="btnInjectBag">Aggiungi</button>
+    <div class="scroll-region">
+      <!-- GLOBAL PRO OVERLAY -->
+      <div id="globalProOverlay" class="pro-overlay">
+        <div class="pro-modal">
+          <h3>👑 Sblocca Pokélike PRO</h3>
+          <p>
+            L'accesso alle impostazioni avanzate della Run, dello Zaino e delle
+            Statistiche richiede una licenza PRO.<br /><br /><small
+              >(Codice di test: <b>POKELIKE-PRO-2026</b>)</small
+            >
+          </p>
+          <input
+            type="text"
+            id="licenseKey"
+            class="field-input w-100"
+            style="text-align: center; font-weight: bold"
+            placeholder="XXXX-XXXX-XXXX"
+          />
+          <button
+            class="btn btn-primary w-100"
+            id="btnUnlockPro"
+            style="margin-top: 12px"
+          >
+            Verifica Licenza
+          </button>
+          <p class="pro-error" id="proError"></p>
         </div>
       </div>
-      
-      <div class="section">
-        <div class="section-title">🎒 Il Tuo Zaino</div>
-        <div id="bagList" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+      <!-- TAB: TEAM -->
+      <div class="content active" id="contentTeam">
+        <div class="empty"><p>Sincronizzazione in corso...</p></div>
       </div>
+
+      <!-- TAB: RUN -->
+      <div class="content" id="contentRun">
+        <div class="pro-lockable">
+          <div class="section">
+            <div class="section-title">💰 Finanze & Base</div>
+            <div class="field-row">
+              <label class="field-label" style="width: 100px"
+                >Pokédollars:</label
+              >
+              <input
+                type="number"
+                id="runMoney"
+                class="field-input"
+                style="flex: 1"
+              />
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                margin-top: 8px;
+              "
+            >
+              <button class="btn btn-pro btn-money" data-amt="1000">
+                + 1.000 ₽
+              </button>
+              <button class="btn btn-pro btn-money" data-amt="5000">
+                + 5.000 ₽
+              </button>
+              <button class="btn btn-pro btn-money" data-amt="10000">
+                + 10.000 ₽
+              </button>
+              <button class="btn btn-pro btn-money" data-amt="-1000">
+                - 1.000 ₽
+              </button>
+              <button class="btn btn-pro btn-money" data-amt="-5000">
+                - 5.000 ₽
+              </button>
+              <button class="btn btn-pro btn-money" data-amt="-10000">
+                - 10.000 ₽
+              </button>
+            </div>
+            <div class="field-row" style="margin-top: 16px">
+              <label class="field-label" style="width: 100px">Medaglie:</label>
+              <input
+                type="number"
+                id="runBadges"
+                class="field-input"
+                style="flex: 1"
+              />
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🗺️ Progressione</div>
+            <div class="field-row">
+              <label class="field-label" style="width: 100px">Mappa N.:</label>
+              <input
+                type="number"
+                id="runMap"
+                class="field-input"
+                style="flex: 1"
+              />
+            </div>
+            <div class="field-row" style="margin-top: 16px">
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  width: 100%;
+                "
+              >
+                <input type="checkbox" id="runNuzlocke" /> Modalità Nuzlocke
+                (Morte Permanente)
+              </label>
+            </div>
+            <div class="field-row">
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  width: 100%;
+                "
+              >
+                <input type="checkbox" id="runEndless" /> Modalità Endless
+              </label>
+            </div>
+            <div class="field-row" id="endlessStageRow" style="display: none">
+              <label class="field-label" style="width: 100px"
+                >Ondata Endless:</label
+              >
+              <input
+                type="number"
+                id="runEndlessStage"
+                class="field-input"
+                style="flex: 1"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: BAG -->
+      <div class="content" id="contentBag">
+        <div class="pro-lockable">
+          <div class="section">
+            <div class="section-title">➕ Genera Strumento</div>
+            <div class="field-row">
+              <select id="bagItemSelect" class="field-input" style="flex: 1">
+                <option value="rare_candy">Caramella Rara</option>
+                <option value="tm_normal">TM (Livello Mosse)</option>
+                <option value="moon_stone">Pietra Lunare</option>
+                <option value="lucky_egg">Fortunuovo</option>
+                <option value="choice_band">Bendascelta</option>
+                <option value="rocky_helmet">Bitorzolelmo</option>
+                <option value="leftovers">Avanzi</option>
+                <option value="charcoal">Carbonella</option>
+                <option value="miracle_seed">Miracolseme</option>
+                <option value="hard_stone">Pietradura</option>
+                <option value="silk_scarf">Sciarpa Seta</option>
+                <option value="pixie_plate">Lastrafata</option>
+                <option value="mystic_water">Acquamagica</option>
+                <option value="magnet">Calamita</option>
+                <option value="black_belt">Cinturanera</option>
+                <option value="poison_barb">Velenaculeo</option>
+                <option value="soft_sand">Sabbia Soffice</option>
+                <option value="sharp_beak">Beccaffilato</option>
+                <option value="twisted_spoon">Cucchiaio Torto</option>
+                <option value="silver_powder">Argentopolvere</option>
+                <option value="spell_tag">Spettrotarga</option>
+                <option value="dragon_fang">Dentedidrago</option>
+                <option value="black_glasses">Occhialineri</option>
+                <option value="metal_coat">Metalcoperta</option>
+                <option value="never_melt_ice">Gelomai</option>
+              </select>
+              <button class="btn btn-pro" id="btnInjectBag">Aggiungi</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🎒 Il Tuo Zaino</div>
+            <div
+              id="bagList"
+              style="display: flex; flex-direction: column; gap: 8px"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: MEGA -->
+      <div class="content" id="contentMega">
+        <div class="pro-lockable">
+          <div class="section">
+            <div class="section-title">💠 Sblocco Mega Evoluzioni</div>
+            <p style="font-size: 11px; color: #8b92a5; margin-bottom: 12px">
+              Il gioco sblocca i Bracciali Mega vincendo le sfide con il Pokémon
+              base (MVP). Qui puoi iniettare vittorie fittizie per sbloccare le
+              pietre istantaneamente.
+            </p>
+
+            <div class="field-row">
+              <label class="field-label" style="width: 100px"
+                >Seleziona Mega:</label
+              >
+              <select
+                id="megaUnlockSelect"
+                class="field-input"
+                style="flex: 1"
+              ></select>
+            </div>
+            <button
+              class="btn btn-pro w-100"
+              id="btnUnlockSingleMega"
+              style="margin-top: 12px"
+            >
+              Sblocca Questa Mega
+            </button>
+
+            <hr
+              style="
+                border: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                margin: 20px 0;
+              "
+            />
+
+            <button
+              class="btn btn-primary w-100"
+              id="btnUnlockAllMegas"
+              style="background: linear-gradient(135deg, #cc00ff, #5500ff)"
+            >
+              ✨ SBLOCCA TUTTE LE MEGA ✨
+            </button>
+          </div>
+
+          <div class="section" style="margin-top: 16px">
+            <div class="pro-banner mb-3" id="proBanner">
+              <div
+                class="d-flex justify-content-between align-items-center mb-2"
+              >
+                <span class="badge bg-warning text-dark"
+                  ><i class="fas fa-crown me-1"></i>Versione PRO</span
+                >
+                <a
+                  href="http://localhost:3000"
+                  target="_blank"
+                  style="color: #ffd700; font-size: 11px; text-decoration: none"
+                  >Ottieni Licenza</a
+                >
+              </div>
+              <div class="input-group input-group-sm mb-2">
+                <input
+                  type="text"
+                  id="licenseKeyInput"
+                  class="form-control bg-dark text-light border-secondary"
+                  placeholder="Codice Licenza..."
+                />
+                <button class="btn btn-outline-warning" id="btnVerifyLicense">
+                  Attiva
+                </button>
+              </div>
+              <div
+                id="licenseStatus"
+                style="font-size: 11px; color: #dc3545; display: none"
+              ></div>
+            </div>
+
+            <button
+              id="btnUnlockAllStarters"
+              class="btn btn-warning w-100 mb-2 pro-feature"
+              disabled
+            >
+              <i class="fas fa-star me-2"></i>Sblocca Tutti gli Starter Base
+              <i class="fas fa-lock float-end mt-1" style="opacity: 0.5"></i>
+            </button>
+
+            <button
+              id="btnUnlockLegendaries"
+              class="btn btn-primary w-100 mb-2 pro-feature"
+              disabled
+            >
+              <i class="fas fa-dragon me-2"></i>Aggiungi Leggendari (Uovo)
+              <i class="fas fa-lock float-end mt-1" style="opacity: 0.5"></i>
+            </button>
+
+            <button
+              id="btnUnlockLegendariesShiny"
+              class="btn btn-info w-100 mb-2 pro-feature text-white"
+              disabled
+            >
+              <i class="fas fa-sparkles me-2"></i>Aggiungi Leggendari Shiny
+              (Uovo)
+              <i class="fas fa-lock float-end mt-1" style="opacity: 0.5"></i>
+            </button>
+
+            <div class="pro-feature-container mt-3" style="position: relative">
+              <div
+                class="pro-overlay"
+                style="
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  right: 0;
+                  bottom: 0;
+                  background: rgba(0, 0, 0, 0.5);
+                  z-index: 10;
+                  border-radius: 8px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <i
+                  class="fas fa-lock"
+                  style="font-size: 24px; color: rgba(255, 255, 255, 0.3)"
+                ></i>
+              </div>
+              <div class="section-title">📚 Sblocco Pokédex Regionale</div>
+              <select
+                id="dexRegionSelect"
+                class="form-select bg-dark text-light border-secondary mb-2"
+                style="font-size: 13px"
+              >
+                <option value="ALL">Tutte le Regioni (Globale)</option>
+                <option value="1">Kanto (Gen 1)</option>
+                <option value="2">Johto (Gen 2)</option>
+                <option value="3">Hoenn (Gen 3)</option>
+                <option value="4">Sinnoh (Gen 4)</option>
+                <option value="5">Unova (Gen 5)</option>
+                <option value="6">Kalos (Gen 6)</option>
+              </select>
+              <div class="d-flex gap-2">
+                <button
+                  id="btnCompleteDex"
+                  class="btn btn-danger flex-fill pro-feature"
+                  disabled
+                >
+                  <i class="fas fa-book me-1"></i>Pokédex
+                </button>
+                <button
+                  id="btnCompleteShinyDex"
+                  class="btn btn-info text-white flex-fill pro-feature"
+                  disabled
+                >
+                  <i class="fas fa-sparkles me-1"></i>Shiny Dex
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: ADD -->
+      <div class="content" id="contentAdd"></div>
     </div>
-  </div>
 
-  <!-- TAB: MEGA -->
-  <div class="content" id="contentMega">
-    <div class="pro-lockable">
-      <div class="section">
-        <div class="section-title">💠 Sblocco Mega Evoluzioni</div>
-        <p style="font-size:11px; color:#8b92a5; margin-bottom:12px;">Il gioco sblocca i Bracciali Mega vincendo le sfide con il Pokémon base (MVP). Qui puoi iniettare vittorie fittizie per sbloccare le pietre istantaneamente.</p>
-        
-        <div class="field-row">
-          <label class="field-label" style="width:100px;">Seleziona Mega:</label>
-          <select id="megaUnlockSelect" class="field-input" style="flex:1;"></select>
-        </div>
-        <button class="btn btn-pro w-100" id="btnUnlockSingleMega" style="margin-top:12px;">Sblocca Questa Mega</button>
-        
-        <hr style="border:none; border-top:1px solid rgba(255,255,255,0.1); margin: 20px 0;">
-        
-        <button class="btn btn-primary w-100" id="btnUnlockAllMegas" style="background: linear-gradient(135deg, #cc00ff, #5500ff);">✨ SBLOCCA TUTTE LE MEGA ✨</button>
-      </div>
-
-      <div class="section" style="margin-top:16px;">
-        <div class="section-title">🌟 Sblocco Pokédex & Starter</div>
-        <p style="font-size:11px; color:#8b92a5; margin-bottom:12px;">Completa istantaneamente il Pokédex. Il pulsante Starter sblocca inoltre tutti i Pokémon nella schermata iniziale falsificando i record della Hall of Fame (comprese le versioni Shiny e i Leggendari).</p>
-        
-        <button id="btnUnlockAllStarters" class="btn btn-pro w-100 mb-2">Sblocca Tutti gli Starter Base</button>
-        <button id="btnUnlockLegendaries" class="btn btn-pro w-100 mb-2">Aggiungi Leggendari (Uovo)</button>
-        <button id="btnUnlockLegendariesShiny" class="btn btn-pro w-100 mb-2">Aggiungi Leggendari Shiny (Uovo)</button>
-        
-        <div class="field-row" style="margin-bottom: 8px;">
-          <button class="btn btn-pro" id="btnCompleteDex" style="flex:1;">📚 Completa Pokédex</button>
-          <button class="btn btn-pro" id="btnCompleteShinyDex" style="flex:1;">✨ Pokédex Shiny</button>
-        </div>
-        
-        <button class="btn btn-primary w-100" id="btnUnlockAllStarters" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color:#000; font-weight:bold;">🌟 SBLOCCA TUTTI GLI STARTER 🌟</button>
-      </div>
+    <div class="footer">
+      <span class="status" id="statusBar">In attesa di connessione...</span>
     </div>
-  </div>
 
-  <!-- TAB: ADD -->
-  <div class="content" id="contentAdd"></div>
-
-</div>
-
-<div class="footer">
-  <span class="status" id="statusBar">In attesa di connessione...</span>
-</div>
-
-<script src="pokemonData.js"></script>
-<script src="popup.js"></script>
-</body>
+    <script src="pokemonData.js"></script>
+    <script src="popup.js"></script>
+  </body>
 </html>

@@ -1,0 +1,10 @@
+{
+  "licenses": {
+    "PRO-0D4C2456-6974": {
+      "valid": true,
+      "accountId": "erpaffo",
+      "createdAt": "2026-07-20T14:51:26.974Z",
+      "provider": "Stripe"
+    }
+  }
+}

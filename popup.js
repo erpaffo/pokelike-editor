@@ -7,8 +7,7 @@ let selectedAddPokemon = null;
 let searchQuery = '';
 let currentPokedollars = 0;
 
-// PRO License
-let isPro = localStorage.getItem('pokelike_premium_unlocked') === 'true';
+// PRO License (Migrated to global state below)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,7 +48,7 @@ function buildAllPokemon() {
   Object.assign(POKEMON_NAMES, map);
   allPokemon = Object.keys(map)
     .map(id => ({ id: parseInt(id), name: map[id] }))
-    .filter(p => !p.name.toLowerCase().includes('-mega') && POKEMON_STATS[p.id])
+    .filter(p => !p.name.toLowerCase().includes('-mega'))
     .sort((a, b) => a.id - b.id);
 }
 
@@ -504,6 +503,96 @@ document.getElementById('btnInjectBag')?.addEventListener('click', () => {
   renderBag();
 });
 
+// ── GLOBAL STATE ──────────────────────────────────────────────────────────────
+let isPro = localStorage.getItem('pokelike_premium_unlocked') === 'true'; // Sbloccabile tramite localStorage o backend
+let currentTab = 'squadra';
+
+// ── INITIALIZATION ────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  
+  chrome.storage.local.get(['proLicense'], (res) => {
+    if (res.proLicense) {
+      isPro = true;
+      unlockProUI();
+      // Se si vuole, si potrebbe chiamare verifyLicenseWithBackend in background, 
+      // ma per mantenere l'effetto PRO anche a server spento, fidiamoci della cache locale.
+    }
+  });
+  
+  document.getElementById('btnVerifyLicense')?.addEventListener('click', () => {
+    const code = document.getElementById('licenseKeyInput').value.trim();
+    if (!code) return;
+    verifyLicenseWithBackend(code, false);
+  });
+});
+
+function verifyLicenseWithBackend(code, isSilent) {
+  const statusEl = document.getElementById('licenseStatus');
+  if (!isSilent && statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#ffc107';
+    statusEl.innerText = 'Verifica in corso...';
+  }
+  
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab) return;
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => localStorage.getItem('poke_username') || localStorage.getItem('poke_save_uuid') || 'unknown_user'
+    }, (results) => {
+      const accountId = results[0]?.result || 'unknown_user';
+      
+      fetch('http://localhost:3000/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, accountId })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.pro) {
+          isPro = true;
+          chrome.storage.local.set({ proLicense: code });
+          localStorage.setItem('pokelike_premium_unlocked', 'true');
+          unlockProUI();
+          if (!isSilent && statusEl) {
+            statusEl.style.color = '#28a745';
+            statusEl.innerText = 'Licenza valida! Funzionalità Pro sbloccate.';
+          }
+        } else {
+          isPro = false;
+          if (!isSilent && statusEl) {
+            statusEl.style.color = '#dc3545';
+            statusEl.innerText = data.error || 'Codice non valido.';
+          }
+          chrome.storage.local.remove('proLicense');
+        }
+      })
+      .catch(err => {
+        if (!isSilent && statusEl) {
+          statusEl.style.color = '#dc3545';
+          statusEl.innerText = 'Errore di connessione al server.';
+        }
+      });
+    });
+  });
+}
+
+function unlockProUI() {
+  const banner = document.getElementById('proBanner');
+  if (banner) banner.innerHTML = '<div class="alert alert-success py-2 mb-3"><i class="fas fa-check-circle me-2"></i>Versione PRO Attiva</div>';
+  const proElements = document.querySelectorAll('.pro-feature');
+  proElements.forEach(el => {
+    el.removeAttribute('disabled');
+    const lock = el.querySelector('.fa-lock');
+    if (lock) lock.style.display = 'none';
+  });
+  const overlays = document.querySelectorAll('.pro-overlay');
+  overlays.forEach(overlay => overlay.style.display = 'none');
+  checkProState();
+}
+
 // ── SBLOCCHI TAB ──────────────────────────────────────────────────────────────
 
 function renderMega() {
@@ -563,12 +652,60 @@ function injectDex(keyName) {
 
 document.getElementById('btnCompleteDex')?.addEventListener('click', () => {
   if (!isPro) return;
-  injectDex('poke_dex');
+  const region = document.getElementById('dexRegionSelect').value;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab) return;
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (regionCode) => {
+        let dex = {};
+        try { dex = JSON.parse(localStorage.getItem('poke_dex')) || {}; } catch(e){}
+        let start = 1, end = 721;
+        if (regionCode === '1') { start = 1; end = 151; }
+        else if (regionCode === '2') { start = 152; end = 251; }
+        else if (regionCode === '3') { start = 252; end = 386; }
+        else if (regionCode === '4') { start = 387; end = 493; }
+        else if (regionCode === '5') { start = 494; end = 649; }
+        else if (regionCode === '6') { start = 650; end = 721; }
+        for (let i = start; i <= end; i++) dex[i] = 1;
+        localStorage.setItem('poke_dex', JSON.stringify(dex));
+        if (regionCode === 'ALL') {
+          let achievements = [];
+          try { achievements = JSON.parse(localStorage.getItem('poke_achievements') || '[]'); } catch(e){}
+          if(!achievements.includes('pokedex_complete')) achievements.push('pokedex_complete');
+          localStorage.setItem('poke_achievements', JSON.stringify(achievements));
+        }
+      },
+      args: [region]
+    }, () => setStatus('📚 Pokédex aggiornato! Ricarica il gioco.', 'ok'));
+  });
 });
 
 document.getElementById('btnCompleteShinyDex')?.addEventListener('click', () => {
   if (!isPro) return;
-  injectDex('poke_shiny_dex');
+  const region = document.getElementById('dexRegionSelect').value;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab) return;
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (regionCode) => {
+        let sdex = {};
+        try { sdex = JSON.parse(localStorage.getItem('poke_shiny_dex')) || {}; } catch(e){}
+        let start = 1, end = 721;
+        if (regionCode === '1') { start = 1; end = 151; }
+        else if (regionCode === '2') { start = 152; end = 251; }
+        else if (regionCode === '3') { start = 252; end = 386; }
+        else if (regionCode === '4') { start = 387; end = 493; }
+        else if (regionCode === '5') { start = 494; end = 649; }
+        else if (regionCode === '6') { start = 650; end = 721; }
+        for (let i = start; i <= end; i++) sdex[i] = 1;
+        localStorage.setItem('poke_shiny_dex', JSON.stringify(sdex));
+      },
+      args: [region]
+    }, () => setStatus('✨ Pokédex Shiny aggiornato! Ricarica il gioco.', 'ok'));
+  });
 });
 
 document.getElementById('btnUnlockAllStarters')?.addEventListener('click', () => {
