@@ -456,38 +456,44 @@
 
     <div class="tabs">
       <div class="tab active" data-tab="team">🏆 Squadra</div>
+      <div class="tab" data-tab="add">➕ Aggiungi</div>
       <div class="tab" data-tab="run">🗺️ Run</div>
       <div class="tab" data-tab="bag">🎒 Zaino</div>
       <div class="tab" data-tab="mega">💠 Sblocchi</div>
-      <div class="tab" data-tab="add">➕ Aggiungi</div>
+      <div class="tab" data-tab="pro" style="color: #ffd700; font-weight: 800;">👑 PRO</div>
     </div>
 
     <div class="scroll-region">
-      <!-- GLOBAL PRO OVERLAY -->
-      <div id="globalProOverlay" class="pro-overlay">
-        <div class="pro-modal">
-          <h3>👑 Sblocca Pokélike PRO</h3>
-          <p>
-            L'accesso alle impostazioni avanzate della Run, dello Zaino e delle
-            Statistiche richiede una licenza PRO.<br /><br /><small
-              >(Codice di test: <b>POKELIKE-PRO-2026</b>)</small
-            >
+      <!-- TAB: PRO -->
+      <div class="content" id="contentPro">
+        <div class="section">
+          <div class="section-title" style="color: #ffd700; border-bottom-color: rgba(255, 215, 0, 0.2); display: flex; justify-content: space-between; align-items: center;">
+            <span><i class="fas fa-crown"></i> Gestione Licenza PRO</span>
+            <span id="proStatusBadge" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; background: rgba(255,77,109,0.2); color: #ff4d6d; border: 1px solid #ff4d6d;">Stato: Non Attivo</span>
+          </div>
+          <p style="color: #8b92a5; margin-bottom: 12px; font-size: 12px; line-height: 1.4;">
+            Sblocca tutto il potenziale: Editor Avanzato Statistiche (IV, EV, Felicità), 
+            Modifica Medaglie e Mappe, Completamento Pokédex e iniezione di Leggendari.
           </p>
-          <input
-            type="text"
-            id="licenseKey"
-            class="field-input w-100"
-            style="text-align: center; font-weight: bold"
-            placeholder="XXXX-XXXX-XXXX"
-          />
-          <button
-            class="btn btn-primary w-100"
-            id="btnUnlockPro"
-            style="margin-top: 12px"
-          >
-            Verifica Licenza
-          </button>
-          <p class="pro-error" id="proError"></p>
+
+          <div id="proActiveState" style="display: none; text-align: center; padding: 20px 0;">
+            <div style="font-size: 40px; color: #00e676; margin-bottom: 10px;">✅</div>
+            <h3 style="color: #fff; margin-bottom: 5px;">Licenza Attiva!</h3>
+            <p style="color: #8b92a5;">Grazie per il supporto. Tutte le funzionalità sono sbloccate.</p>
+          </div>
+
+          <div id="proUnlockState">
+            <a href="http://localhost:3000" target="_blank" class="btn btn-warning w-100 mb-3" style="font-weight: bold; background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000;">
+              Acquista o Recupera Licenza
+            </a>
+            
+            <label class="field-label mb-1">Hai già un codice?</label>
+            <div class="input-group mb-2">
+              <input type="text" id="licenseKeyInput" class="form-control bg-dark text-light border-secondary" placeholder="XXXX-XXXX-XXXX-XXXX">
+              <button class="btn btn-outline-warning" id="btnVerifyLicense">Attiva</button>
+            </div>
+            <div id="licenseStatus" style="font-size: 11px; text-align: center; min-height: 16px;"></div>
+          </div>
         </div>
       </div>
 
@@ -498,7 +504,6 @@
 
       <!-- TAB: RUN -->
       <div class="content" id="contentRun">
-        <div class="pro-lockable">
           <div class="section">
             <div class="section-title">💰 Finanze & Base</div>
             <div class="field-row">
@@ -540,7 +545,7 @@
               </button>
             </div>
             <div class="field-row" style="margin-top: 16px">
-              <label class="field-label" style="width: 100px">Medaglie:</label>
+              <label class="field-label" style="width: 100px">Medaglie: <i class="fas fa-lock pro-lock-icon" style="color: #ffd700; opacity: 0.5;"></i></label>
               <input
                 type="number"
                 id="runBadges"
@@ -599,11 +604,9 @@
             </div>
           </div>
         </div>
-      </div>
 
       <!-- TAB: BAG -->
       <div class="content" id="contentBag">
-        <div class="pro-lockable">
           <div class="section">
             <div class="section-title">➕ Genera Strumento</div>
             <div class="field-row">
@@ -646,13 +649,11 @@
             ></div>
           </div>
         </div>
-      </div>
 
       <!-- TAB: MEGA -->
       <div class="content" id="contentMega">
-        <div class="pro-lockable">
           <div class="section">
-            <div class="section-title">💠 Sblocco Mega Evoluzioni</div>
+            <div class="section-title">💠 Sblocco Mega Evoluzioni <i class="fas fa-lock pro-lock-icon" style="color: #ffd700; opacity: 0.5; margin-left: auto;"></i></div>
             <p style="font-size: 11px; color: #8b92a5; margin-bottom: 12px">
               Il gioco sblocca i Bracciali Mega vincendo le sfide con il Pokémon
               base (MVP). Qui puoi iniettare vittorie fittizie per sbloccare le
@@ -695,39 +696,7 @@
           </div>
 
           <div class="section" style="margin-top: 16px">
-            <div class="pro-banner mb-3" id="proBanner">
-              <div
-                class="d-flex justify-content-between align-items-center mb-2"
-              >
-                <span class="badge bg-warning text-dark"
-                  ><i class="fas fa-crown me-1"></i>Versione PRO</span
-                >
-                <a
-                  href="http://localhost:3000"
-                  target="_blank"
-                  style="color: #ffd700; font-size: 11px; text-decoration: none"
-                  >Ottieni Licenza</a
-                >
-              </div>
-              <div class="input-group input-group-sm mb-2">
-                <input
-                  type="text"
-                  id="licenseKeyInput"
-                  class="form-control bg-dark text-light border-secondary"
-                  placeholder="Codice Licenza..."
-                />
-                <button class="btn btn-outline-warning" id="btnVerifyLicense">
-                  Attiva
-                </button>
-              </div>
-              <div
-                id="licenseStatus"
-                style="font-size: 11px; color: #dc3545; display: none"
-              ></div>
-            </div>
-
-            <button
-              id="btnUnlockAllStarters"
+            <button id="btnUnlockAllStarters"
               class="btn btn-warning w-100 mb-2 pro-feature"
               disabled
             >
@@ -809,7 +778,6 @@
             </div>
           </div>
         </div>
-      </div>
 
       <!-- TAB: ADD -->
       <div class="content" id="contentAdd"></div>

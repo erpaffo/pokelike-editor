@@ -231,6 +231,7 @@ function renderAll() {
   if (activeTab === 'run') renderRun();
   if (activeTab === 'bag') renderBag();
   if (activeTab === 'mega') renderMega();
+  if (activeTab === 'pro') {/* pro tab has no dynamic JS render */}
 }
 
 function checkProState() {
@@ -380,10 +381,7 @@ function renderTeam() {
 
   document.querySelectorAll('[data-edit]').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      if (!isPro) {
-        document.getElementById('globalProOverlay').classList.add('active');
-        return;
-      }
+      if (!requirePro()) return;
       const idx = e.currentTarget.dataset.edit;
       const panel = document.getElementById(`advStats_${idx}`);
       panel.classList.toggle('active');
@@ -651,7 +649,7 @@ function injectDex(keyName) {
 }
 
 document.getElementById('btnCompleteDex')?.addEventListener('click', () => {
-  if (!isPro) return;
+  if (!requirePro()) return;
   const region = document.getElementById('dexRegionSelect').value;
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
@@ -683,7 +681,7 @@ document.getElementById('btnCompleteDex')?.addEventListener('click', () => {
 });
 
 document.getElementById('btnCompleteShinyDex')?.addEventListener('click', () => {
-  if (!isPro) return;
+  if (!requirePro()) return;
   const region = document.getElementById('dexRegionSelect').value;
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
@@ -709,7 +707,7 @@ document.getElementById('btnCompleteShinyDex')?.addEventListener('click', () => 
 });
 
 document.getElementById('btnUnlockAllStarters')?.addEventListener('click', () => {
-  if (!isPro) return;
+  if (!requirePro()) return;
   
   // Tutti i Pokémon base (primo stadio evolutivo) fino alla Generazione 6 (id <= 721) ESCLUSI i leggendari
   const baseFormStarters = [1,4,7,10,13,16,19,21,23,27,29,32,37,41,43,46,48,50,52,54,56,58,60,63,66,69,72,74,77,79,81,83,84,86,88,90,92,95,96,98,100,102,104,108,109,111,114,115,116,118,120,123,127,128,129,131,132,133,137,138,140,142,147,152,155,158,161,163,165,167,170,172,173,174,175,177,179,187,190,191,193,194,198,200,201,203,204,206,207,209,211,213,214,215,216,218,220,222,223,225,227,228,231,234,235,236,238,239,240,241,246,252,255,258,261,263,265,270,273,276,278,280,283,285,287,290,292,293,296,298,299,300,302,303,304,307,309,311,312,313,314,316,318,320,322,324,325,327,328,331,333,335,336,337,338,339,341,343,345,347,349,351,352,353,355,357,359,360,361,363,366,369,370,371,374,387,390,393,396,399,401,403,406,408,410,412,415,417,418,420,422,425,427,431,433,434,436,438,439,440,441,442,443,446,447,449,451,453,455,456,458,459,495,498,501,504,506,509,511,513,515,517,519,522,524,527,529,531,532,535,538,539,540,543,546,548,550,551,554,556,557,559,561,562,564,566,568,570,572,574,577,580,582,585,587,588,590,592,594,595,597,599,602,605,607,610,613,615,616,618,619,621,622,624,626,627,629,631,632,633,636,650,653,656,659,661,664,667,669,672,674,676,677,679,682,684,686,688,690,692,694,696,698,701,702,703,704,707,708,710,712,714];
@@ -789,7 +787,7 @@ document.getElementById('btnUnlockAllStarters')?.addEventListener('click', () =>
 });
 
 document.getElementById('btnUnlockLegendaries')?.addEventListener('click', () => {
-  if (!isPro) return;
+  if (!requirePro()) return;
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
     if (!tab) return;
@@ -836,7 +834,7 @@ document.getElementById('btnUnlockLegendaries')?.addEventListener('click', () =>
 });
 
 document.getElementById('btnUnlockLegendariesShiny')?.addEventListener('click', () => {
-  if (!isPro) return;
+  if (!requirePro()) return;
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
     if (!tab) return;
@@ -996,7 +994,7 @@ function renderPokeGrid(query) {
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-  const map = { team: 'contentTeam', run: 'contentRun', bag: 'contentBag', mega: 'contentMega', add: 'contentAdd' };
+  const map = { team: 'contentTeam', run: 'contentRun', bag: 'contentBag', mega: 'contentMega', add: 'contentAdd', pro: 'contentPro' };
   document.getElementById(map[name])?.classList.add('active');
   renderAll();
 }
@@ -1017,7 +1015,6 @@ document.getElementById('btnReload').addEventListener('click', () => {
 // Money buttons
 document.querySelectorAll('.btn-money').forEach(btn => {
   btn.addEventListener('click', (e) => {
-    if (!isPro) return;
     const amt = parseInt(e.currentTarget.dataset.amt) || 0;
     currentPokedollars = Math.max(0, currentPokedollars + amt);
     document.getElementById('runMoney').value = currentPokedollars;
