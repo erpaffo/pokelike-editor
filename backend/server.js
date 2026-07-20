@@ -98,7 +98,7 @@ app.post('/buy/checkout', async (req, res) => {
               description: 'Sblocca starter leggendari perfetti, manipolazione della fortuna e costo zero.',
               images: ['https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png'],
             },
-            unit_amount: 999, // 9,99€
+            unit_amount: 299, // 2,99€
           },
           quantity: 1,
         },
