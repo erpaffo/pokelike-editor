@@ -1,176 +1,179 @@
 # Pokélike Editor
 
+🇬🇧 English · [🇮🇹 Italiano](README.it.md)
+
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/odjebmffnpbdgbbipanhnabedldeabad?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/pok%C3%A9like-editor-%E2%80%94-editor/odjebmffnpbdgbbipanhnabedldeabad)
-[![Utenti](https://img.shields.io/chrome-web-store/users/odjebmffnpbdgbbipanhnabedldeabad?label=utenti)](https://chromewebstore.google.com/detail/pok%C3%A9like-editor-%E2%80%94-editor/odjebmffnpbdgbbipanhnabedldeabad)
-[![Licenza: MIT](https://img.shields.io/badge/licenza-MIT-blue.svg)](LICENSE)
+[![Users](https://img.shields.io/chrome-web-store/users/odjebmffnpbdgbbipanhnabedldeabad?label=users)](https://chromewebstore.google.com/detail/pok%C3%A9like-editor-%E2%80%94-editor/odjebmffnpbdgbbipanhnabedldeabad)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**➡️ [Installa dal Chrome Web Store](https://chromewebstore.google.com/detail/pok%C3%A9like-editor-%E2%80%94-editor/odjebmffnpbdgbbipanhnabedldeabad)**
+**➡️ [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/pok%C3%A9like-editor-%E2%80%94-editor/odjebmffnpbdgbbipanhnabedldeabad)**
 
-Estensione Chrome (Manifest V3) per gestire il salvataggio locale del fangame
-browser **pokelike.xyz**: squadra, statistiche, zaino, mappa della run, Pokédex e
-sblocchi. Gratuita e senza account.
+Chrome extension (Manifest V3) for managing the local save of the browser
+fangame **pokelike.xyz**: team, stats, bag, run map, Pokédex and unlocks.
+Free, no account required.
 
-> Progetto non ufficiale, non affiliato a pokelike.xyz né a Nintendo / Game Freak /
-> The Pokémon Company. Vedi [LICENSE](LICENSE) e [PRIVACY.md](PRIVACY.md).
+> Unofficial project, not affiliated with pokelike.xyz or Nintendo / Game Freak /
+> The Pokémon Company. See [LICENSE](LICENSE) and [PRIVACY.md](PRIVACY.md).
 
-## Installazione
+## Installation
 
-- **Consigliata**: dal [Chrome Web Store]({STORE}), con aggiornamenti automatici.
-- **Dal sorgente**: clona questa repository e caricala come estensione non
-  pacchettizzata (vedi [Caricare in locale](#caricare-in-locale)).
+- **Recommended**: from the [Chrome Web Store](https://chromewebstore.google.com/detail/pok%C3%A9like-editor-%E2%80%94-editor/odjebmffnpbdgbbipanhnabedldeabad), with automatic updates.
+- **From source**: clone this repository and load it as an unpacked extension
+  (see [Loading locally](#loading-locally)).
 
-Poi apri `https://pokelike.xyz`, avvia una run e clicca l'icona dell'estensione.
+Then open `https://pokelike.xyz`, start a run and click the extension icon.
 
-## Funzionalità
+## Features
 
-- **Squadra**: modifica livello, HP, IV, natura, felicità, shiny, strumento tenuto, tier mosse; cura completa.
-  Due scorciatoie: rendere shiny tutta la squadra (aggiornando anche gli sprite) e portare tutte le mosse al tier massimo.
-- **Megapietre**: assegnabili dalla squadra o dallo zaino. Strumento e pietra condividono lo stesso slot (`heldItem`), quindi il menu è unico e diviso in gruppi. Per ogni Pokémon si offrono solo le pietre della sua specie, perché `syncMegaForm` applica la forma solo se `megaSpecies === speciesId`. L'oggetto lo costruisce il gioco con `makeMegaStoneItem()`, letto a runtime.
-- **Mutazioni**: cambia, aggiungi o rimuovi il tipo extra dei Pokémon mutanti dell'Endless (`_mutationType`), tenendolo allineato con `types`.
-- **Aggiungi**: inserisci qualsiasi Pokémon (Gen 1–6) con ricerca e filtri per tipo/generazione.
-- **Run**: PokéDollari, medaglie, mappa corrente, modalità Nuzlocke/Endless, editor dei nodi mappa.
-- **Oggetti passivi**: scegli quali passivi tenere nella run, letti da `PASSIVE_ITEM_POOL`. Gli slot seguono la regola del gioco: in Endless `min(10, run.erPassiveSlots)`, altrimenti `run.challengePassiveCap` o 5.
-- **Zaino**: aggiunge strumenti tenuti (held item) rispettando i 10 slot e il limite di un esemplare per tipo.
-- **Vitamine**: porta al massimo i bonus statistica (10 per statistica, +5% ciascuno) per un singolo starter o per tutti e 366. Le vitamine si danno fuori dalla run e il gioco le conserva in `poke_stat_buffs` **per capostipite della linea evolutiva**, non per esemplare: il bersaglio sono quindi i Pokémon di primo stadio selezionabili (forme base e leggendari), non la squadra. Attacco copre atk e special insieme, perché la Proteina del gioco li alza in coppia e `getTotalBuffPoints` li conta una volta sola.
-- **Tratti della Torre**: i tratti dell'Endless non si salvano, il gioco li ricalcola dalla squadra prima di ogni lotta (`computeTraitTiers`) e `poke_endless_state.traitTiers` è solo una cache per l'HUD. L'editor replica la formula (`peso = 1 + shiny + mutante + team_reroll + legendario con legend_traits`, `tier = min(12, punti ÷ 2)`), mostra l'effetto di ogni tratto al livello raggiunto e, scelti tipo e tier, calcola le modifiche minime alla squadra elencandole prima di applicarle.
-- **Tratti forzati**: i tier si possono imporre a piacere, anche oltre il 12, **senza toccare la squadra**. Non passa dal salvataggio perché i tier non sono un dato: `src/force-traits.js`, registrato solo quando l'utente accende la funzione, avvolge `computeTraitTiers()` nella pagina e ne sostituisce il risultato. Spento di default; spegnendolo la registrazione viene rimossa. I valori vivono in una chiave `pkeditor_*` del localStorage della pagina, quindi restano fuori da backup e sincronizzazione.
-- **Megapietre ricostruite**: 11 forme Mega dei dati del gioco non hanno una pietra (Charizard X, Swampert, Camerupt, Zygarde, Starmie, Pyroar, Froslass, Floette, Malamar, Chimecho, Golurk). `syncMegaForm` legge tutto dall'oggetto tenuto e non da `MEGA_STONES`, quindi l'editor le costruisce dai dati della forma. Stanno in un gruppo a parte perché non danno l'abilità Mega, cercata per id della pietra vera.
-- **Editor mappa per modalità**: 22 tipi di nodo, offerti solo dove il gioco può generarli. Poke Mart e squadra cattiva esistono solo nella Torre **dalla mappa 31** (`ER_NODE_BANDS`); Silver, Magma/Aqua, Sottosuolo, Mondo Distorto e Rivale N solo fuori dalla Torre e nella generazione giusta; Ricompensa e Uscita solo nelle sotto-mappe. Dei tipi esclusi viene spiegato il motivo.
-- **Sblocchi**: cruscotto di completamento ("Platino"), megaevoluzioni, Pokédex/Shiny Dex per regione, starter e leggendari.
-  Comprende le sfide base, monotipo, settimanali e giornaliere (tutte in `poke_challenges_done`, ognuna con il suo id), gli obiettivi attivabili uno per uno, e la riscossione delle ricompense obiettivo rimaste in sospeso — conteggio e pagamento li fa il gioco con `countClaimableAchRewards` / `claimAllAchRewards`.
-- **Backup**: copia del salvataggio prima di modificarlo, con ripristino, export e import su file. Ultimi 5 conservati in `chrome.storage.local`.
-  Il ripristino gestisce la sincronizzazione cloud del gioco (vedi sotto), altrimenti verrebbe annullato al ricaricamento.
-- **Lingue**: interfaccia in italiano, inglese, spagnolo, francese, tedesco e portoghese, selezionabile dalle impostazioni.
-  Nomi di strumenti e tipi restano in inglese fuori dall'italiano, per ritrovarli identici dentro al gioco.
-  Gli oggetti passivi e i tratti, invece, sono tradotti leggendo il dizionario del gioco stesso (`I18N[lingua].items` e `I18N[lingua].traits`), che copre le stesse sei lingue: accanto alla traduzione resta il nome di gioco, e nel salvataggio finisce comunque la voce originale.
-- **Ricerca multilingua**: ogni elenco lungo (passivi, starter delle vitamine, obiettivi, sfide, megaevoluzioni, strumenti e megapietre) ha una casella di ricerca che capisce tutte le lingue del gioco, non solo quella dell'interfaccia. I lettori in `page.js` allegano a ogni voce i suoi nomi presi da `I18N[lingua]`, quindi "lucky egg" trova l'Uovo Fortunato anche in italiano. La normalizzazione toglie accenti e apostrofi (`glucks` trova `Glüks-Ei`, `kings rock` trova `King's Rock`) e si cerca anche per numero o per id.
-- **Impostazioni**: lingua, temi, reset dati.
+- **Team**: edit level, HP, IVs, nature, happiness, shiny, held item and move tier; full heal.
+  Two shortcuts: make the whole team shiny (sprites included) and raise every move to its top tier.
+- **Mega Stones**: assignable from the team or the bag. Held item and stone share the same slot (`heldItem`), so there is a single menu split into groups. Each Pokémon is only offered the stones of its own species, because `syncMegaForm` only applies the form when `megaSpecies === speciesId`. The item itself is built by the game's `makeMegaStoneItem()`, read at runtime.
+- **Mutations**: change, add or remove the extra type of Endless mutant Pokémon (`_mutationType`), keeping it in sync with `types`.
+- **Add**: insert any Pokémon (Gen 1–6) with search and type/generation filters.
+- **Run**: PokéDollars, badges, current map, Nuzlocke/Endless modes, map node editor.
+- **Passive items**: choose which passives to keep in the run, read from `PASSIVE_ITEM_POOL`. Slots follow the game's rule: `min(10, run.erPassiveSlots)` in Endless, otherwise `run.challengePassiveCap` or 5.
+- **Bag**: add held items while respecting the 10 slots and the one-per-kind limit.
+- **Vitamins**: max out stat bonuses (10 per stat, +5% each) for a single starter or all 366. Vitamins are given outside a run, and the game stores them in `poke_stat_buffs` **per evolution-line root**, not per individual: the targets are therefore the selectable first-stage Pokémon (base forms and legendaries), not the team. Attack covers atk and special together, because the game's Protein raises them as a pair and `getTotalBuffPoints` counts them once.
+- **Tower traits**: Endless traits are not saved — the game recomputes them from the team before every battle (`computeTraitTiers`), and `poke_endless_state.traitTiers` is just a cache for the HUD. The editor mirrors the formula (`weight = 1 + shiny + mutant + team_reroll + legendary with legend_traits`, `tier = min(12, points ÷ 2)`), shows each trait's effect at the tier reached and, given a type and a target tier, computes the minimal team changes and lists them before applying.
+- **Forced traits**: tiers can be set freely, even above 12, **without touching the team**. This does not go through the save because tiers are not stored data: `src/force-traits.js`, registered only when the user turns the feature on, wraps `computeTraitTiers()` in the page and replaces its result. Off by default; turning it off removes the registration. Values live in a `pkeditor_*` key of the page's localStorage, so they stay out of backups and cloud sync.
+- **Rebuilt Mega Stones**: 11 Mega forms in the game data have no stone (Charizard X, Swampert, Camerupt, Zygarde, Starmie, Pyroar, Froslass, Floette, Malamar, Chimecho, Golurk). `syncMegaForm` reads everything from the held item rather than from `MEGA_STONES`, so the editor builds them from the form data. They sit in a separate group because they don't grant the Mega ability, which is looked up by the real stone's id.
+- **Mode-aware map editor**: 22 node types, offered only where the game can generate them. Poké Mart and villain team only exist in the Tower **from map 31** (`ER_NODE_BANDS`); Silver, Magma/Aqua, Underground, Distortion World and Rival N only outside the Tower and in the right generation; Reward and Exit only in sub-maps. Excluded types come with the reason they're excluded.
+- **Unlocks**: completion dashboard ("Platinum"), Mega Evolutions, Pokédex/Shiny Dex by region, starters and legendaries.
+  Selectable starters and legendaries live in `poke_hof_index`, the index the game derives from the Hall of Fame and eggs: the editor updates it starting from `getHofIndex()`, and completing the Shiny Dex also fills `shinySpecies`.
+  Also covers base, monotype, weekly and daily challenges (all in `poke_challenges_done`, each with its own id), achievements that can be toggled one by one, and claiming pending achievement rewards — counting and payout are done by the game via `countClaimableAchRewards` / `claimAllAchRewards`.
+- **Backup**: copy of the save before editing it, with restore, export and import to file. The last 5 are kept in `chrome.storage.local`.
+  Restore handles the game's cloud sync (see below); otherwise it would be undone on reload.
+- **Languages**: UI in Italian, English, Spanish, French, German and Portuguese, selectable from the settings.
+  Item and type names stay in English outside Italian, so they match what you see in the game.
+  Passive items and traits, on the other hand, are translated using the game's own dictionary (`I18N[lang].items` and `I18N[lang].traits`), which covers the same six languages: the in-game name is shown next to the translation, and the save always gets the original entry.
+- **Multilingual search**: every long list (passives, vitamin starters, achievements, challenges, Mega Evolutions, items and Mega Stones) has a search box that understands all of the game's languages, not just the UI one. The readers in `page.js` attach to each entry its names taken from `I18N[lang]`, so "uovo fortunato" finds the Lucky Egg even in English. Normalization strips accents and apostrophes (`glucks` finds `Glüks-Ei`, `kings rock` finds `King's Rock`), and you can also search by number or id.
+- **Settings**: language, themes, data reset.
 
-Le modifiche versione per versione sono in [CHANGELOG.md](CHANGELOG.md).
+Version-by-version changes are in [CHANGELOG.md](CHANGELOG.md) (in Italian).
 
-## Come funziona
+## How it works
 
-L'estensione non ha backend. Quando apri il popup su una scheda `pokelike.xyz`
-legge le chiavi `poke_*` / `pkrl_*` dal `localStorage` della pagina tramite
-`chrome.scripting`, ti permette di modificarle e le riscrive nello stesso
-`localStorage`. Nessun dato lascia il tuo browser.
+The extension has no backend. When you open the popup on a `pokelike.xyz` tab
+it reads the `poke_*` / `pkrl_*` keys from the page's `localStorage` through
+`chrome.scripting`, lets you edit them and writes them back to the same
+`localStorage`. No data leaves your browser.
 
-Il catalogo degli achievement e delle sfide viene letto **a runtime dalla pagina
-del gioco** (`world: "MAIN"`), così resta allineato agli aggiornamenti di
-pokelike.xyz senza duplicarne i dati dentro l'estensione.
+The achievement and challenge catalog is read **at runtime from the game page**
+(`world: "MAIN"`), so it stays in step with pokelike.xyz updates without
+duplicating the game's data inside the extension.
 
-Il pulsante **Sincronizza** ricarica la pagina del gioco e solo dopo rilegge il
-salvataggio. L'ordine conta: il gioco tiene la partita in memoria e la riscrive
-nel `localStorage` al primo salvataggio automatico, quindi senza ricaricare le
-modifiche appena fatte verrebbero sovrascritte invece di essere applicate.
+The **Sync** button reloads the game page and only then re-reads the save. The
+order matters: the game keeps the run in memory and writes it back to
+`localStorage` on its first autosave, so without a reload your fresh edits would
+be overwritten instead of applied.
 
-Finito il ricaricamento, l'estensione **riprende da sola la run**: cerca fra i
-tre pulsanti `btn-continue-run` / `btn-continue-endless` /
-`btn-continue-challenge` quello che il gioco sta effettivamente mostrando e lo
-preme. La modalita' dedotta dal salvataggio serve solo a stabilire l'ordine di
-ricerca: una run puo' essere insieme endless e sfida (`challengeId`
-"endless2"), e in quel caso il pulsante giusto e' quello della sfida. Se nessun
-pulsante compare entro pochi secondi, non viene premuto nulla.
+Once the reload finishes, the extension **resumes the run on its own**: among
+the three buttons `btn-continue-run` / `btn-continue-endless` /
+`btn-continue-challenge` it looks for the one the game is actually showing and
+clicks it. The mode inferred from the save only sets the search order: a run can
+be both endless and a challenge (`challengeId` "endless2"), and in that case the
+right button is the challenge one. If no button appears within a few seconds,
+nothing is clicked.
 
-### Ripristino e sincronizzazione cloud
+### Restore and cloud sync
 
-Il gioco tiene una copia del salvataggio sul proprio server e all'avvio la
-confronta con quella locale (`_compareSaves`). Il confronto non guarda le date
-ma 18 dimensioni di progresso e **conserva la copia più avanzata**: un backup è
-per definizione più indietro, quindi verrebbe sovrascritto appena la pagina si
-ricarica.
+The game keeps a copy of the save on its own server and compares it with the
+local one on startup (`_compareSaves`). The comparison doesn't look at dates but
+at 18 progress dimensions, and **keeps the more advanced copy**: a backup is by
+definition behind, so it would be overwritten as soon as the page reloads.
 
-Per questo il ripristino registra al volo `src/pause-cloud-sync.js` a
-`document_start` nel mondo MAIN, che imposta `window.__pokeCloudPause` prima che
-il bundle del gioco parta. In modalità “cloud”, dopo il reload viene poi
-chiamata la funzione `_push()` del gioco per allineare il server allo stato
-ripristinato. In modalità “locale” il server resta intatto e il ripristino vale
-solo per quella sessione.
+That's why restoring registers `src/pause-cloud-sync.js` on the fly at
+`document_start` in the MAIN world, which sets `window.__pokeCloudPause` before
+the game bundle starts. In "cloud" mode the game's `_push()` function is then
+called after the reload to bring the server in line with the restored state. In
+"local" mode the server is left untouched and the restore only applies to that
+session.
 
-Connessioni di rete in uscita:
+Outgoing network connections:
 
-| Host | Uso |
-|------|-----|
-| `pokelike.xyz` | immagini sprite, le stesse già caricate dalla pagina del gioco |
+| Host | Purpose |
+|------|---------|
+| `pokelike.xyz` | sprite images, the same ones the game page already loads |
 
-Nessun altro host viene contattato: niente API esterne, font remoti o CDN.
-Statistiche base e tipi (#1–#721) sono inclusi in `js/pokemonTypes.js`.
+No other host is contacted: no external APIs, remote fonts or CDNs.
+Base stats and types (#1–#721) are bundled in `js/pokemonTypes.js`.
 
-## Sviluppo
+## Development
 
-Codice sorgente diretto, nessun passaggio di build: il popup carica
-`pokemonData.js` (script classico) e `js/main.js` (modulo ES).
+Plain source code, no build step: the popup loads `pokemonData.js` (classic
+script) and `js/main.js` (ES module).
 
 ```
 manifest.json         # MV3
-popup.html            # UI + CSS del popup
-pokemonData.js        # forme Mega + helper sprite/nomi (globali, script classico)
+popup.html            # popup UI + CSS
+pokemonData.js        # Mega forms + sprite/name helpers (globals, classic script)
 js/
-  main.js             # entrypoint, routing tab
-  state.js            # stato condiviso + I/O localStorage della pagina
-  page.js             # ponte verso la scheda del gioco (mondi ISOLATED / MAIN)
-  backup.js           # backup/ripristino del salvataggio + import/export file
-  i18n.js             # dizionario a 6 lingue e helper t()
-  modal.js            # dialogo a scelta multipla
-  pokemonTypes.js     # tipi e base stats #1–#721 (generati da PokeAPI)
-  search.js           # ricerca multilingua e normalizzazione
-  traits.js           # formula dei tratti della Torre
-  mapNodes.js         # tipi di nodo mappa ammessi per modalità
-  ui.js               # helper UI
-  constants.js        # nomi Pokémon, held item, mega, liste starter, DONATION_URL
-  tabs/               # una vista per scheda (squadra, aggiungi, run, zaino, vitamine, tratti, opzioni)
+  main.js             # entry point, tab routing
+  state.js            # shared state + page localStorage I/O
+  page.js             # bridge to the game tab (ISOLATED / MAIN worlds)
+  backup.js           # save backup/restore + file import/export
+  i18n.js             # 6-language dictionary and t() helper
+  modal.js            # multiple-choice dialog
+  pokemonTypes.js     # types and base stats #1–#721 (generated from PokeAPI)
+  search.js           # multilingual search and normalization
+  traits.js           # Tower trait formula
+  mapNodes.js         # map node types allowed per mode
+  ui.js               # UI helpers
+  constants.js        # Pokémon names, held items, megas, starter lists, DONATION_URL
+  tabs/               # one view per tab (team, add, run, bag, vitamins, traits, settings)
 src/
-  pause-cloud-sync.js # mette in pausa la sync del gioco durante un ripristino
-  force-traits.js     # tratti forzati (registrato solo se attivato)
-store_assets/         # icone, screenshot e testi per il Chrome Web Store
-_locales/             # chrome.i18n: nome e descrizione del pacchetto
+  pause-cloud-sync.js # pauses the game's sync during a restore
+  force-traits.js     # forced traits (registered only when enabled)
+store_assets/         # icons, screenshots and texts for the Chrome Web Store
+_locales/             # chrome.i18n: package name and description
   it|en|es|fr|de|pt/messages.json
 ```
 
-### Due livelli di traduzione
+### Two translation layers
 
-Servono entrambi, perché coprono cose diverse:
+Both are needed, because they cover different things:
 
 | | `_locales/` + chrome.i18n | `js/i18n.js` |
 |---|---|---|
-| Cosa traduce | nome e descrizione del pacchetto | tutta l'interfaccia del popup |
-| Dove si vede | chrome://extensions, Web Store | dentro l'estensione |
-| Lingua scelta da | il browser | l'utente, dalle impostazioni |
+| Translates | package name and description | the whole popup UI |
+| Shown in | chrome://extensions, Web Store | inside the extension |
+| Language chosen by | the browser | the user, in settings |
 
-`chrome.i18n` non può sostituire il secondo livello: `getMessage()` risolve sempre nella lingua del browser e non esiste alcuna API per forzarne un'altra, quindi non permetterebbe il selettore di lingua. Alla prima apertura il popup parte da `chrome.i18n.getUILanguage()`, così i due livelli concordano finché l'utente non sceglie diversamente.
+`chrome.i18n` can't replace the second layer: `getMessage()` always resolves to the browser language and there is no API to force another one, so it wouldn't allow a language picker. On first open the popup starts from `chrome.i18n.getUILanguage()`, so the two layers agree until the user picks something else.
 
-### Caricare in locale
+### Loading locally
 
-1. `git clone` della repository (o download dello ZIP da GitHub).
-2. `chrome://extensions` → attiva **Modalità sviluppatore**.
-3. **Carica estensione non pacchettizzata** → seleziona la cartella clonata.
-4. Apri `https://pokelike.xyz`, avvia una run, clicca l'icona dell'estensione.
+1. `git clone` the repository (or download the ZIP from GitHub).
+2. `chrome://extensions` → enable **Developer mode**.
+3. **Load unpacked** → select the cloned folder.
+4. Open `https://pokelike.xyz`, start a run, click the extension icon.
 
-### Prima della pubblicazione
+### Before publishing
 
-- Vedi `store_assets/PUBLISHING.md` per la procedura completa sul Chrome Web Store.
+- See `store_assets/PUBLISHING.md` (in Italian) for the full Chrome Web Store procedure.
 
-### Pacchetto per lo Store
+### Store package
 
-Lo ZIP da caricare contiene solo i file dell'estensione, senza `store_assets/`,
-documentazione e file git. Da Git Bash, nella cartella del progetto:
+The ZIP to upload contains only the extension files, without `store_assets/`,
+documentation or git files. From Git Bash, in the project folder:
 
 ```bash
 v=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' manifest.json)
 zip -r -X "pokelike-editor-$v.zip" manifest.json popup.html pokemonData.js js src icons _locales
 ```
 
-Non usare `Compress-Archive` di Windows PowerShell 5.1: scrive i percorsi con il
-backslash (`js\main.js`) e Chrome può non trovare i file nelle sottocartelle.
-Dettagli in [store_assets/PUBLISHING.md](store_assets/PUBLISHING.md).
+Don't use Windows PowerShell 5.1's `Compress-Archive`: it writes paths with
+backslashes (`js\main.js`) and Chrome may fail to find files in subfolders.
+Details in [store_assets/PUBLISHING.md](store_assets/PUBLISHING.md).
 
-Gli ZIP sono esclusi da git (`.gitignore`).
+ZIP files are excluded from git (`.gitignore`).
 
-## Contribuire
+## Contributing
 
-Segnalazioni e proposte sono benvenute nelle
-[Issues](../../issues). Per le pull request vedi [CONTRIBUTING.md](CONTRIBUTING.md).
+Bug reports and suggestions are welcome in the
+[Issues](../../issues), in English or Italian. For pull requests see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Licenza
+## License
 
 [MIT](LICENSE) © sassoanarchico
