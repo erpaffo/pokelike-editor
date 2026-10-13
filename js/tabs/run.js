@@ -1,4 +1,8 @@
-import { currentRun, currentPokedollars, setCurrentPokedollars, autoSave, passivePool, endlessState } from '../state.js';
+import {
+  currentRun, currentPokedollars, setCurrentPokedollars, autoSave, passivePool, endlessState,
+  POKEMON_NAMES, MAX_POKEDOLLARS
+} from '../state.js';
+import { readSignatureItems } from '../page.js';
 import {
   NODE_IDS, NODE_INFO, availableNodeTypes, unavailableReason, isSubMap, towerMapIndex
 } from '../mapNodes.js';
@@ -11,12 +15,13 @@ import { filterBySearch, searchBoxHtml, bindSearchBox, searchTerms } from '../se
 //   endless  -> min(ER_PASSIVE_SLOTS_MAX, run.erPassiveSlots ?? 6)
 //   altrimenti -> run.challengePassiveCap || MAX_PASSIVES
 const ER_PASSIVE_SLOTS_MAX = 10;
+const ER_PASSIVE_SLOTS_START = 6;
 const MAX_PASSIVES = 5;
 
 export function passiveSlots(run) {
   if (!run) return MAX_PASSIVES;
-  if (run.isEndlessMode && run.erPassiveSlots != null) {
-    return Math.min(ER_PASSIVE_SLOTS_MAX, run.erPassiveSlots);
+  if (run.challengeEndless2 || (run.isEndlessMode && run.erPassiveSlots != null)) {
+    return Math.min(ER_PASSIVE_SLOTS_MAX, run.erPassiveSlots ?? ER_PASSIVE_SLOTS_START);
   }
   return run.challengePassiveCap || MAX_PASSIVES;
 }
@@ -120,10 +125,119 @@ function togglePassive(id, on) {
   setStatus(t(on ? 'run.passiveAdded' : 'run.passiveRemoved', { name: def?.label || def?.name || id }), 'ok');
 }
 
+// ── Endless 2.0 ──────────────────────────────────────────────────────────
+// Campi propri della Torre 2.0 (run.challengeEndless2), tutti nel salvataggio
+// della run:
+//   erPassiveSlots    slot passivi, da 6 a 10 (erPassiveSlots del gioco)
+//   erCatchLevelBonus livelli aggiunti ai Pokemon catturati (doCatchNode)
+//   erMode            "challenge" (Hardcore) o "creative": cambia curva e
+//                     record, quindi qui si mostra soltanto
+//   erSignature       { id, uid }: l'Oggetto Firma e il _uid di chi lo tiene
+//
+// Oggetti Firma risolti dal gioco per le specie in squadra; la chiave evita di
+// richiederli a ogni ridisegno.
+let sigBySpecies;
+let sigKey = null;
+
+function isEndless2(run) {
+  return !!(run && run.challengeEndless2);
+}
+
+function memberName(pk) {
+  return pk.nickname || pk.name || POKEMON_NAMES[pk.speciesId] || `#${pk.speciesId}`;
+}
+
+function renderEndless2() {
+  const host = document.getElementById('endless2Section');
+  if (!host) return;
+  if (!isEndless2(currentRun)) { host.innerHTML = ''; host.style.display = 'none'; return; }
+  host.style.display = '';
+
+  const team = (currentRun.team || []).filter(pk => pk && pk.speciesId);
+  const key = team.map(pk => pk.speciesId).join(',');
+  if (key !== sigKey) {
+    sigKey = key;
+    sigBySpecies = undefined;
+    readSignatureItems(team.map(pk => pk.speciesId))
+      .catch(() => null)
+      .then(res => { if (sigKey === key) { sigBySpecies = res; renderEndless2(); } });
+  }
+
+  const slots = currentRun.erPassiveSlots ?? ER_PASSIVE_SLOTS_START;
+  const mode = currentRun.erMode === 'creative' ? t('er.modeCreative')
+    : currentRun.erMode ? t('er.modeHardcore') : t('er.modeUnset');
+  const holder = currentRun.erSignature?.uid;
+
+  let sigHtml;
+  if (sigBySpecies === undefined) {
+    sigHtml = `<p style="font-size:11px; color:var(--text-muted);">${t('er.sigLoading')}</p>`;
+  } else if (!sigBySpecies) {
+    sigHtml = `<p style="font-size:11px; color:var(--red-light);">${t('er.sigUnavailable')}</p>`;
+  } else {
+    const options = team.map(pk => {
+      const sig = sigBySpecies[pk.speciesId];
+      if (!sig || pk._uid == null) return '';
+      return `<option value="${esc(String(pk._uid))}"${holder === pk._uid ? ' selected' : ''}>${esc(memberName(pk))} — ${esc(sig.name)}</option>`;
+    }).join('');
+    const current = team.find(pk => pk._uid === holder);
+    const currentSig = current && sigBySpecies[current.speciesId];
+    sigHtml = `
+      <div class="field-row">
+        <select id="erSignatureSelect" class="field-input" style="flex:1; min-width:0;">
+          <option value="">${t('er.sigNone')}</option>${options}
+        </select>
+      </div>
+      ${currentSig ? `<p style="font-size:10px; color:var(--text-muted); margin-top:4px; line-height:1.4;">${esc(currentSig.desc)}</p>` : ''}`;
+  }
+
+  host.innerHTML = `
+    <div class="section-title">🗼 ${t('er.title')}</div>
+    <div class="field-row">
+      <label class="field-label" style="width:150px;">${t('er.passiveSlots')}</label>
+      <input type="number" id="erPassiveSlots" class="field-input" min="${ER_PASSIVE_SLOTS_START}" max="${ER_PASSIVE_SLOTS_MAX}" value="${slots}" style="flex:1;">
+    </div>
+    <div class="field-row">
+      <label class="field-label" style="width:150px;">${t('er.catchBonus')}</label>
+      <input type="number" id="erCatchLevelBonus" class="field-input" min="0" value="${currentRun.erCatchLevelBonus || 0}" style="flex:1;">
+    </div>
+    <div class="field-row">
+      <span class="field-label" style="width:150px;">${t('er.mode')}</span>
+      <span style="font-size:12px;">${esc(mode)}</span>
+    </div>
+    <div class="section-title" style="margin-top:12px; font-size:12px;">${t('er.sigTitle')}</div>
+    <p style="font-size:11px; color:var(--text-muted); margin-bottom:6px; line-height:1.45;">${t('er.sigHint')}</p>
+    ${sigHtml}`;
+
+  host.querySelector('#erPassiveSlots')?.addEventListener('change', (e) => {
+    const n = parseInt(e.target.value, 10) || ER_PASSIVE_SLOTS_START;
+    currentRun.erPassiveSlots = Math.min(ER_PASSIVE_SLOTS_MAX, Math.max(ER_PASSIVE_SLOTS_START, n));
+    autoSave();
+    renderEndless2();
+    renderPassives();
+  });
+  host.querySelector('#erCatchLevelBonus')?.addEventListener('change', (e) => {
+    currentRun.erCatchLevelBonus = Math.max(0, parseInt(e.target.value, 10) || 0);
+    autoSave();
+    renderEndless2();
+  });
+  host.querySelector('#erSignatureSelect')?.addEventListener('change', (e) => {
+    const pk = team.find(p => String(p._uid) === e.target.value);
+    const sig = pk && sigBySpecies?.[pk.speciesId];
+    if (!sig) {
+      delete currentRun.erSignature;
+      setStatus(t('er.sigRemoved'), 'ok');
+    } else {
+      currentRun.erSignature = { id: sig.id, uid: pk._uid };
+      setStatus(t('er.sigAssigned', { item: sig.name, name: memberName(pk) }), 'ok');
+    }
+    autoSave(false);
+    renderEndless2();
+  });
+}
+
 export function renderRun() {
   document.getElementById('runMoney').value = currentPokedollars;
   if (!currentRun) return;
-  
   document.getElementById('runMoney').value = currentPokedollars;
   document.getElementById('runBadges').value = currentRun.badges || 0;
   document.getElementById('runMap').value = currentRun.currentMap || 0;
@@ -138,6 +252,7 @@ export function renderRun() {
     stageRow.style.display = 'none';
   }
 
+  renderEndless2();
   renderPassives();
 
   renderMapEditor();
@@ -257,10 +372,28 @@ export function renderMapEditor() {
 }
 
 export function initRunListeners() {
+  const moneyInput = document.getElementById('runMoney');
+  if (moneyInput) moneyInput.max = String(MAX_POKEDOLLARS);
+
+  // Il valore mostrato torna quello effettivo, cioe' dopo il tetto.
+  document.querySelectorAll('.btn-money').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setCurrentPokedollars(currentPokedollars + (Number(btn.dataset.amt) || 0));
+      if (moneyInput) moneyInput.value = currentPokedollars;
+      autoSave();
+    });
+  });
+
   ['runMoney','runBadges','runMap','runEndlessStage'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', (e) => {
       const val = parseInt(e.currentTarget.value) || 0;
-      if(id === 'runMoney') setCurrentPokedollars(val);
+      if (id === 'runMoney') {
+        setCurrentPokedollars(val);
+        e.currentTarget.value = currentPokedollars;
+        autoSave();
+        return;
+      }
+      if (!currentRun) return;
       if(id === 'runBadges') currentRun.badges = val;
       if(id === 'runMap') currentRun.currentMap = val;
       if(id === 'runEndlessStage') currentRun.endlessStage = val;

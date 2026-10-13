@@ -11,9 +11,23 @@ export let currentRun = null;
 export let speciesList = [];
 export let allPokemon = [];
 export let currentPokedollars = 0;
-export let currentStatsKey = null;
-export let currentStats = null;
 export let selectedAddPokemon = null;
+
+// Da dove viene la run mostrata: 'poke_current_run' per quella in corso, o la
+// chiave "poke_parked_run:<modo>" in cui il gioco parcheggia una run Endless
+// 2.0 quando si passa a un'altra modalita'. Il salvataggio torna li'.
+export let runSource = null;
+const LIVE_RUN_KEY = 'poke_current_run';
+const PARKED_RUN_PREFIX = 'poke_parked_run:';
+
+// Tetto dei PokeDollari. Oltre Number.MAX_SAFE_INTEGER JavaScript perde le
+// unita' (99999999999999999 diventa 100000000000000000) e ogni somma del gioco
+// sarebbe approssimata: si resta molto sotto, con margine per i guadagni.
+export const MAX_POKEDOLLARS = 999999999999;
+export function clampPokedollars(v) {
+  const n = Math.floor(Number(v) || 0);
+  return Math.min(MAX_POKEDOLLARS, Math.max(0, n));
+}
 
 // Catalogo delle megapietre letto dal gioco: null finche' non e' disponibile
 // (pagina non aperta o gioco aggiornato), cosi' l'interfaccia puo' dirlo.
@@ -70,9 +84,7 @@ export const POKEMON_NAMES = { ...POKEMON_NAMES_FALLBACK };
 export function setCurrentRun(v) { currentRun = v; }
 export function setSpeciesList(v) { speciesList = v; }
 export function setAllPokemon(v) { allPokemon = v; }
-export function setCurrentPokedollars(v) { currentPokedollars = v; }
-export function setCurrentStatsKey(v) { currentStatsKey = v; }
-export function setCurrentStats(v) { currentStats = v; }
+export function setCurrentPokedollars(v) { currentPokedollars = clampPokedollars(v); }
 export function setSelectedAddPokemon(v) { selectedAddPokemon = v; }
 
 export function buildAllPokemon() {
@@ -128,24 +140,25 @@ export function loadData() {
         return;
       }
       const data = results[0].result;
-      const run = data['poke_current_run'];
       const species = data['pkrl_species_list'];
       const pokedollars = data['poke_pokedollars'];
-      
-      currentStatsKey = null;
-      currentStats = null;
-      for (const k in data) {
-        if (data[k] && data[k].includes('"mvpCounts"')) {
-          currentStatsKey = k;
-          try { currentStats = JSON.parse(data[k]); } catch(e){}
-        }
-      }
-      if (!currentStats) {
-        currentStatsKey = 'poke_stats'; // guess a default
-        currentStats = { runs: 0, clears: 0, mvpCounts: {} };
+
+      // La run in corso ha la precedenza; altrimenti quella parcheggiata, che
+      // il gioco riprende dalla sua scheda (oggi solo Endless 2.0).
+      let run = data[LIVE_RUN_KEY];
+      runSource = run ? LIVE_RUN_KEY : null;
+      if (!run) {
+        const parkedKey = Object.keys(data).filter(k => k.startsWith(PARKED_RUN_PREFIX)).sort()[0];
+        try {
+          const parked = parkedKey ? JSON.parse(data[parkedKey]) : null;
+          if (parked && parked.run) { run = parked.run; runSource = parkedKey; }
+        } catch (e) { /* chiave parcheggiata illeggibile: come se non ci fosse */ }
       }
 
-      currentPokedollars = pokedollars ? (JSON.parse(pokedollars) || 0) : 0;
+      const storedMoney = pokedollars ? (Number(pokedollars) || 0) : 0;
+      currentPokedollars = clampPokedollars(storedMoney);
+      // Un valore oltre il tetto e' gia' impreciso: lo si ripara subito.
+      if (storedMoney > MAX_POKEDOLLARS) saveMoney();
 
       if (!run) {
         currentRun = null;
@@ -159,14 +172,15 @@ export function loadData() {
         normalizeRun(currentRun);
         speciesList = species ? JSON.parse(species) : [];
         buildAllPokemon();
-        setStatus(t('status.loaded', { n: currentRun.team?.length || 0 }), 'ok');
+        setStatus(t(runSource === LIVE_RUN_KEY ? 'status.loaded' : 'status.loadedParked',
+          { n: currentRun.team?.length || 0 }), 'ok');
         renderAll();
         // I cataloghi letti dal gioco arrivano dopo: si ridisegna quando ci sono.
         Promise.all([
           readMegaStones().catch(() => null),
           readPassivePool(getLanguage()).catch(() => null),
           readTraitCatalog(getLanguage()).catch(() => null),
-          readEndlessState().catch(() => null),
+          readEndlessState(runSource).catch(() => null),
           readExtraMegaForms().catch(() => null),
           readItemAliases().catch(() => null),
           readSpeciesAliases().catch(() => null)
@@ -187,24 +201,24 @@ export function loadData() {
   });
 }
 
-let saveTimer = null;
-export function autoSave(showMessage = true) {
-  clearTimeout(saveTimer);
-  if(showMessage && currentRun) setStatus(t('status.saving'), '');
-  
-  // Save money and stats separately (they exist even without an active run)
+// I PokeDollari esistono anche senza una run: si salvano a parte.
+function saveMoney() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
     if (!tab) return;
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: (pd, statsKey, statsStr) => { 
-        localStorage.setItem('poke_pokedollars', JSON.stringify(pd)); 
-        if (statsKey && statsStr) localStorage.setItem(statsKey, statsStr);
-      },
-      args: [currentPokedollars, currentStatsKey, currentStats ? JSON.stringify(currentStats) : null]
+      func: (pd) => { localStorage.setItem('poke_pokedollars', JSON.stringify(pd)); },
+      args: [clampPokedollars(currentPokedollars)]
     });
   });
+}
+
+let saveTimer = null;
+export function autoSave(showMessage = true) {
+  clearTimeout(saveTimer);
+  if(showMessage && currentRun) setStatus(t('status.saving'), '');
+  saveMoney();
 
   if (!currentRun) return;
 
@@ -216,8 +230,20 @@ export function autoSave(showMessage = true) {
       const runStr = JSON.stringify(currentRun);
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        func: (data) => { localStorage.setItem('poke_current_run', data); return true; },
-        args: [runStr]
+        // Una run parcheggiata e' { run, endless } in un'unica chiave: si
+        // sostituisce solo `run`, lasciando lo stato della Torre com'e'.
+        func: (data, source) => {
+          if (source && source.startsWith('poke_parked_run:')) {
+            const parked = JSON.parse(localStorage.getItem(source) || 'null');
+            if (!parked) return false;
+            parked.run = data;
+            localStorage.setItem(source, JSON.stringify(parked));
+            return true;
+          }
+          localStorage.setItem('poke_current_run', data);
+          return true;
+        },
+        args: [runStr, runSource || LIVE_RUN_KEY]
       }, () => {
         if (!chrome.runtime.lastError && showMessage) {
           setStatus(t('status.saved'), 'ok');

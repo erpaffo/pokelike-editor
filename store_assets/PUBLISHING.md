@@ -14,7 +14,9 @@
 2. ~~Inserisci la tua email in `PRIVACY.md` e in `store_assets/STORE_LISTING.md`~~
    — fatto: `paffetto@gmail.com`.
 3. Controlla `manifest.json`: `version` va **aumentata a ogni nuovo caricamento**
-   (ora `2.2.1`).
+   (ora `2.3.0`). Aggiungi anche la voce della stessa versione in
+   `js/whatsnew.js`: è il riquadro «novità» che gli utenti vedono dopo
+   l'aggiornamento (senza voce non compare nulla).
 4. Carica l'estensione non pacchettizzata in `chrome://extensions` e prova ogni
    scheda su `pokelike.xyz` con una run attiva.
 
@@ -33,7 +35,7 @@ Lo ZIP deve contenere il `manifest.json` **alla radice** (non dentro una
 sottocartella). Dalla cartella del progetto:
 
 ```bash
-zip -r -X pokelike-editor-2.2.1.zip manifest.json popup.html pokemonData.js js icons src _locales
+zip -r -X pokelike-editor-2.3.0.zip manifest.json popup.html pokemonData.js js icons src _locales
 ```
 
 > ⚠️ **Non usare `Compress-Archive` di Windows PowerShell 5.1.** Scrive i
@@ -44,8 +46,8 @@ zip -r -X pokelike-editor-2.2.1.zip manifest.json popup.html pokemonData.js js i
 > Per controllare uno ZIP già creato: `unzip -l nomefile.zip` — i percorsi
 > devono apparire come `js/main.js`, mai `js\main.js`.
 
-Lo ZIP della versione 2.2.1 è già stato creato e verificato:
-`pokelike-editor-2.2.1.zip`.
+Lo ZIP della versione 2.3.0 è già stato creato e verificato:
+`pokelike-editor-2.3.0.zip`.
 
 > Due cartelle sono obbligatorie nel pacchetto:
 > `src/pause-cloud-sync.js`, senza cui il ripristino di un backup viene

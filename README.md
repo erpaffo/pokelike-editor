@@ -27,10 +27,13 @@ Then open `https://pokelike.xyz`, start a run and click the extension icon.
 
 - **Team**: edit level, HP, IVs, nature, happiness, shiny, held item and move tier; full heal.
   Two shortcuts: make the whole team shiny (sprites included) and raise every move to its top tier.
+  In Endless runs also the augment (`_augmentPct`) and mutation strength (`_mutationPct`), with max HP rescaled the way `_recalcMaxHp` does.
 - **Mega Stones**: assignable from the team or the bag. Held item and stone share the same slot (`heldItem`), so there is a single menu split into groups. Each Pokémon is only offered the stones of its own species, because `syncMegaForm` only applies the form when `megaSpecies === speciesId`. The item itself is built by the game's `makeMegaStoneItem()`, read at runtime.
 - **Mutations**: change, add or remove the extra type of Endless mutant Pokémon (`_mutationType`), keeping it in sync with `types`.
 - **Add**: insert any Pokémon (Gen 1–6) with search and type/generation filters.
-- **Run**: PokéDollars, badges, current map, Nuzlocke/Endless modes, map node editor.
+- **Run**: PokéDollars (up to 999,999,999,999 — beyond that JavaScript loses precision), badges, current map, Nuzlocke/Endless modes, map node editor.
+  When no run is in progress, the **paused Endless 2.0 run** is loaded (`poke_parked_run:endless2`, where the game moves it when you switch mode), and edits are written back to that key.
+- **Endless 2.0**: Signature Item (one for each of the 366 evolution lines, `run.erSignature = { id, uid }`, resolved by the game via `SIG_BY_ROOT`), passive slots 6–10, extra catch levels (`erCatchLevelBonus`); the Hardcore/Creative mode is shown read-only.
 - **Passive items**: choose which passives to keep in the run, read from `PASSIVE_ITEM_POOL`. Slots follow the game's rule: `min(10, run.erPassiveSlots)` in Endless, otherwise `run.challengePassiveCap` or 5.
 - **Bag**: add held items while respecting the 10 slots and the one-per-kind limit.
 - **Vitamins**: max out stat bonuses (10 per stat, +5% each) for a single starter or all 366. Vitamins are given outside a run, and the game stores them in `poke_stat_buffs` **per evolution-line root**, not per individual: the targets are therefore the selectable first-stage Pokémon (base forms and legendaries), not the team. Attack covers atk and special together, because the game's Protein raises them as a pair and `getTotalBuffPoints` counts them once.
@@ -39,8 +42,11 @@ Then open `https://pokelike.xyz`, start a run and click the extension icon.
 - **Rebuilt Mega Stones**: 11 Mega forms in the game data have no stone (Charizard X, Swampert, Camerupt, Zygarde, Starmie, Pyroar, Froslass, Floette, Malamar, Chimecho, Golurk). `syncMegaForm` reads everything from the held item rather than from `MEGA_STONES`, so the editor builds them from the form data. They sit in a separate group because they don't grant the Mega ability, which is looked up by the real stone's id.
 - **Mode-aware map editor**: 22 node types, offered only where the game can generate them. Poké Mart and villain team only exist in the Tower **from map 31** (`ER_NODE_BANDS`); Silver, Magma/Aqua, Underground, Distortion World and Rival N only outside the Tower and in the right generation; Reward and Exit only in sub-maps. Excluded types come with the reason they're excluded.
 - **Unlocks**: completion dashboard ("Platinum"), Mega Evolutions, Pokédex/Shiny Dex by region, starters and legendaries.
+  Megas follow the game's rule (`ownsMegaStone`): the Mega Bracelet — a Tower clear of stage 6 without a challenge in the Hall of Fame — and evolution-line MVPs in `poke_challenge_stats.mvpCounts` at least equal to the stone's tier (1/5/10/50). Stones and counts are read from the game.
   Selectable starters and legendaries live in `poke_hof_index`, the index the game derives from the Hall of Fame and eggs: the editor updates it starting from `getHofIndex()`, and completing the Shiny Dex also fills `shinySpecies`.
   Also covers base, monotype, weekly and daily challenges (all in `poke_challenges_done`, each with its own id), achievements that can be toggled one by one, and claiming pending achievement rewards — counting and payout are done by the game via `countClaimableAchRewards` / `claimAllAchRewards`.
+- **SpireMon**: owned and shiny cards, tokens, deck building (`poke_spire_cards`), with the `SPIRE_CARDS` catalog read from the game.
+- **Legendary shards**: shard count and legendary eggs in a row without a shiny, with the shiny odds of the next legendary egg (1% + 0.3% per egg).
 - **Backup**: copy of the save before editing it, with restore, export and import to file. The last 5 are kept in `chrome.storage.local`.
   Restore handles the game's cloud sync (see below); otherwise it would be undone on reload.
 - **Languages**: UI in Italian, English, Spanish, French, German and Portuguese, selectable from the settings.
@@ -112,6 +118,7 @@ js/
   state.js            # shared state + page localStorage I/O
   page.js             # bridge to the game tab (ISOLATED / MAIN worlds)
   backup.js           # save backup/restore + file import/export
+  whatsnew.js         # "what's new" banner after an update
   i18n.js             # 6-language dictionary and t() helper
   modal.js            # multiple-choice dialog
   pokemonTypes.js     # types and base stats #1–#721 (generated from PokeAPI)
@@ -120,7 +127,7 @@ js/
   mapNodes.js         # map node types allowed per mode
   ui.js               # UI helpers
   constants.js        # Pokémon names, held items, megas, starter lists, DONATION_URL
-  tabs/               # one view per tab (team, add, run, bag, vitamins, traits, settings)
+  tabs/               # one view per tab (team, add, run, bag, vitamins, traits, unlocks, collections, settings)
 src/
   pause-cloud-sync.js # pauses the game's sync during a restore
   force-traits.js     # forced traits (registered only when enabled)

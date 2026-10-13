@@ -150,7 +150,7 @@ Senza questo URL l'invio verrà bloccato più avanti.
 
 ## Ordine consigliato
 
-1. Carica lo ZIP `pokelike-editor-2.2.1.zip` (se non l'hai già fatto).
+1. Carica lo ZIP `pokelike-editor-2.3.0.zip` (se non l'hai già fatto).
 2. Store listing: icona, 4 screenshot, descrizione, categoria, lingua.
 3. Pubblica `PRIVACY.md` da qualche parte e copia l'URL.
 4. Privacy: scopo unico, le 5 motivazioni, uso dei dati, URL informativa.

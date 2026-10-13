@@ -31,4 +31,5 @@ l'estensione dopo ogni modifica.
 3. Aggiungi una voce in `CHANGELOG.md` sotto una sezione `[Non rilasciato]`.
 
 Le versioni in `manifest.json` le aggiorna il maintainer al momento della
-pubblicazione sullo Store.
+pubblicazione sullo Store, aggiungendo anche la voce della nuova versione in
+`js/whatsnew.js` (avviso mostrato agli utenti dopo l'aggiornamento).

@@ -217,6 +217,155 @@ export function buildMegaStoneItem(stoneId) {
   }, [stoneId]);
 }
 
+// ── Sblocco delle megapietre ─────────────────────────────────────────────
+// Una pietra si puo' usare se (ownsMegaStone) il Mega Bracciale e' sbloccato e
+// gli MVP della sua linea evolutiva arrivano al tier della pietra (1/5/10/50).
+// Gli MVP si leggono da poke_challenge_stats.mvpCounts, sommati su tutte le
+// forme raggiungibili della linea (megaLineMvpCount): poke_stats il gioco non
+// lo legge piu'. Tier e conteggi vengono chiesti al gioco, non copiati qui.
+export function readMegaUnlocks() {
+  return execInMain(() => {
+    try {
+      if (typeof MEGA_STONES === 'undefined' || typeof megaLineMvpCount !== 'function') return null;
+      return {
+        bracelet: typeof isMegaBraceletUnlocked === 'function' ? !!isMegaBraceletUnlocked() : null,
+        stones: MEGA_STONES.filter(s => s && s.id).map(s => ({
+          id: s.id,
+          name: s.megaName || s.name || s.id,
+          species: s.species,
+          tier: s.tier || 1,
+          count: megaLineMvpCount(s)
+        }))
+      };
+    } catch (e) {
+      return null;
+    }
+  });
+}
+
+// Porta al tier richiesto le pietre indicate (tutte se ids e' null). Il
+// mancante va sulla specie della pietra, che fa parte della sua linea: la
+// somma del gioco lo conta. Gli MVP gia' guadagnati non si toccano.
+export function unlockMegaStones(ids) {
+  return execInMain((ids) => {
+    try {
+      if (typeof MEGA_STONES === 'undefined') return null;
+      const KEY = 'poke_challenge_stats';
+      let stats = {};
+      try { stats = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { stats = {}; }
+      if (!stats.mvpCounts || typeof stats.mvpCounts !== 'object') stats.mvpCounts = {};
+      const mvp = stats.mvpCounts;
+      const line = (species) => (typeof _megaLineSpecies === 'function' ? [..._megaLineSpecies(species)] : [species]);
+      let changed = 0;
+      MEGA_STONES
+        .filter(s => s && s.id && (!ids || ids.includes(s.id)))
+        .forEach(s => {
+          const have = line(s.species).reduce((sum, id) => sum + (mvp[id] || 0), 0);
+          const need = (s.tier || 1) - have;
+          if (need <= 0) return;
+          mvp[s.species] = (mvp[s.species] || 0) + need;
+          changed++;
+        });
+      localStorage.setItem(KEY, JSON.stringify(stats));
+      return changed;
+    } catch (e) {
+      return null;
+    }
+  }, [ids || null]);
+}
+
+// Il Mega Bracciale non e' un flag: il gioco lo considera ottenuto quando la
+// Hall of Fame contiene una scalata della Torre allo stadio 6 senza sfida
+// (getTowerStageClears(6)). La voce si aggiunge con la funzione del gioco, che
+// aggiorna anche l'indice; la squadra vuota evita di sbloccare altri starter.
+export function unlockMegaBracelet() {
+  return execInMain(() => {
+    try {
+      if (typeof isMegaBraceletUnlocked === 'function' && isMegaBraceletUnlocked()) return true;
+      if (typeof saveHallOfFameEntry !== 'function') return null;
+      saveHallOfFameEntry([], 6, false, true, 6, null, false, { runId: 'pkeditor-mega-bracelet', pkeditor: true });
+      return typeof isMegaBraceletUnlocked === 'function' ? !!isMegaBraceletUnlocked() : true;
+    } catch (e) {
+      return null;
+    }
+  });
+}
+
+// ── Oggetti Firma (Endless 2.0) ──────────────────────────────────────────
+// Uno per linea evolutiva (SIG_BY_ROOT). Il gioco ne tiene uno alla volta in
+// run.erSignature = { id, uid } e lo applica solo al Pokemon con quel _uid,
+// se la sua radice coincide con quella dell'oggetto (sigEffectsFor).
+// Qui si risolve l'oggetto di ogni specie richiesta.
+export function readSignatureItems(speciesIds) {
+  return execInMain((ids) => {
+    try {
+      if (typeof SIG_BY_ROOT === 'undefined') return null;
+      const root = (id) => (typeof getEvoLineRoot === 'function' ? getEvoLineRoot(id) : id);
+      const out = {};
+      ids.forEach(id => {
+        const sig = SIG_BY_ROOT[root(id)];
+        if (sig) out[id] = { id: sig.id, name: sig.name || sig.id, desc: sig.desc || '', sprite: sig.sprite || '' };
+      });
+      return out;
+    } catch (e) {
+      return null;
+    }
+  }, [speciesIds]);
+}
+
+// ── SpireMon ─────────────────────────────────────────────────────────────
+// Collezione in poke_spire_cards: owned{id:copie}, shiny{id:true}, tokens,
+// clears{intro,challenge}. Il catalogo (SPIRE_CARDS, forme escluse come fa
+// spCollectionTotal) e le regole vengono dal gioco.
+export function readSpire() {
+  return execInMain(() => {
+    try {
+      if (typeof SPIRE_CARDS === 'undefined') return null;
+      let col = {};
+      try { col = JSON.parse(localStorage.getItem('poke_spire_cards') || '{}') || {}; } catch (e) { col = {}; }
+      const cards = SPIRE_CARDS.filter(c => c && !c.form).map(c => ({ id: c.id, name: c.name, rarity: c.rarity }));
+      const owned = col.owned || {};
+      const shiny = col.shiny || {};
+      return {
+        total: cards.length,
+        owned: cards.filter(c => (owned[c.id] | 0) > 0).length,
+        shiny: cards.filter(c => shiny[c.id]).length,
+        tokens: col.tokens | 0,
+        packCost: typeof SP_PACK_TOKENS === 'number' ? SP_PACK_TOKENS : 5,
+        deckUnlocked: !!(col.clears && col.clears.intro)
+      };
+    } catch (e) {
+      return null;
+    }
+  });
+}
+
+// op: 'cards' (tutte possedute), 'shiny' (tutte anche shiny), 'tokens' (value),
+// 'deck' (costruzione del mazzo, che il gioco apre dopo la vittoria Intro).
+export function writeSpire(op, value) {
+  return execInMain((op, value) => {
+    try {
+      if (typeof SPIRE_CARDS === 'undefined') return null;
+      let col = {};
+      try { col = JSON.parse(localStorage.getItem('poke_spire_cards') || '{}') || {}; } catch (e) { col = {}; }
+      if (!col.owned || typeof col.owned !== 'object') col.owned = {};
+      if (!col.shiny || typeof col.shiny !== 'object') col.shiny = {};
+      if (!col.clears || typeof col.clears !== 'object') col.clears = {};
+      const cards = SPIRE_CARDS.filter(c => c && !c.form);
+      if (op === 'cards' || op === 'shiny') {
+        cards.forEach(c => { col.owned[c.id] = Math.max(col.owned[c.id] | 0, 1); });
+      }
+      if (op === 'shiny') cards.forEach(c => { col.shiny[c.id] = true; });
+      if (op === 'tokens') col.tokens = Math.max(0, Math.floor(Number(value) || 0));
+      if (op === 'deck') col.clears.intro = 1;
+      localStorage.setItem('poke_spire_cards', JSON.stringify(col));
+      return true;
+    } catch (e) {
+      return null;
+    }
+  }, [op, value ?? null]);
+}
+
 // Riprende la run dalla schermata del titolo dopo un ricaricamento.
 //
 // Il gioco ha tre pulsanti "riprendi" e ne mostra solo quello pertinente: e'
@@ -469,11 +618,22 @@ export function readTraitCatalog(lang) {
 
 // Scrive nella cache dei tier della Torre, per allineare subito l'HUD dopo
 // aver cambiato la squadra. Il gioco la rifara' comunque alla lotta seguente.
-export function writeTraitTiersCache(tiers) {
-  return execInPage((tiers) => {
-    const raw = localStorage.getItem('poke_endless_state');
-    if (!raw) return false;
+// Con una run parcheggiata (source = "poke_parked_run:<modo>") lo stato della
+// Torre sta dentro quella chiave, nel campo `endless`.
+export function writeTraitTiersCache(tiers, source) {
+  return execInPage((tiers, source) => {
     try {
+      if (source && source.startsWith('poke_parked_run:')) {
+        const parked = JSON.parse(localStorage.getItem(source) || 'null');
+        if (!parked || !parked.endless) return false;
+        const state = JSON.parse(parked.endless);
+        state.traitTiers = tiers;
+        parked.endless = JSON.stringify(state);
+        localStorage.setItem(source, JSON.stringify(parked));
+        return true;
+      }
+      const raw = localStorage.getItem('poke_endless_state');
+      if (!raw) return false;
       const state = JSON.parse(raw);
       state.traitTiers = tiers;
       localStorage.setItem('poke_endless_state', JSON.stringify(state));
@@ -481,7 +641,7 @@ export function writeTraitTiersCache(tiers) {
     } catch (e) {
       return false;
     }
-  }, [tiers]);
+  }, [tiers, source || null]);
 }
 
 // ── Ricompense degli obiettivi ───────────────────────────────────────────
@@ -573,12 +733,19 @@ export function readChallengeExtras(lang) {
 
 // Stato della Torre: serve all'editor della mappa per sapere a che mappa
 // globale siamo (regione e posizione dentro la regione).
-export function readEndlessState() {
-  return execInPage(() => {
-    const raw = localStorage.getItem('poke_endless_state');
-    if (!raw) return null;
-    try { return JSON.parse(raw); } catch (e) { return null; }
-  });
+export function readEndlessState(source) {
+  return execInPage((source) => {
+    try {
+      if (source && source.startsWith('poke_parked_run:')) {
+        const parked = JSON.parse(localStorage.getItem(source) || 'null');
+        return parked && parked.endless ? JSON.parse(parked.endless) : null;
+      }
+      const raw = localStorage.getItem('poke_endless_state');
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }, [source || null]);
 }
 
 // ── Forme Mega senza pietra ──────────────────────────────────────────────

@@ -1,12 +1,14 @@
-import { currentStats, autoSave, speciesSearchTerms } from '../state.js';
+import { speciesSearchTerms } from '../state.js';
 import { setStatus, esc } from '../ui.js';
-import { MEGA_UNLOCKS, baseFormStarters, legendaryStarters } from '../constants.js';
+import { baseFormStarters, legendaryStarters } from '../constants.js';
 import {
   readGameCatalog, readSaveKeys, writeSaveKeys,
-  readChallengeExtras, readAchRewards, claimAchRewards, unlockHofSpecies, addHofShinySpecies
+  readChallengeExtras, readAchRewards, claimAchRewards, unlockHofSpecies, addHofShinySpecies,
+  readMegaUnlocks, unlockMegaStones, unlockMegaBracelet
 } from '../page.js';
 import { t, getLanguage } from '../i18n.js';
 import { filterBySearch, searchBoxHtml, bindSearchBox, searchTerms } from '../search.js';
+import { loadCollections, collectionsHtml, bindCollections } from './collections.js';
 
 const DEX_REGIONS = {
   ALL: [1, 721],
@@ -34,6 +36,9 @@ let extras = { monotype: null, weekly: null, daily: null, todayType: null, dayNu
 let rewards = null;
 let save = {};
 let loadError = '';
+// Pietre e Mega Bracciale come li vede il gioco: { bracelet, stones: [{ id,
+// name, species, tier, count }] }, oppure null se la pagina non risponde.
+let megaState = null;
 
 // Testo cercato nelle due griglie lunghe: un centinaio di obiettivi e una
 // cinquantina di sfide sono troppi da scorrere a occhio.
@@ -46,10 +51,8 @@ const parse = (raw, fallback) => {
 };
 
 function megaProgress() {
-  const mvp = (currentStats && currentStats.mvpCounts) || {};
-  const names = Object.keys(MEGA_UNLOCKS);
-  const done = names.filter(n => (mvp[MEGA_UNLOCKS[n].baseId] || 0) >= MEGA_UNLOCKS[n].req);
-  return { done: done.length, total: names.length };
+  const stones = megaState?.stones || [];
+  return { done: stones.filter(s => s.count >= s.tier).length, total: stones.length || null };
 }
 
 // Tutte le famiglie di sfide, ognuna con i propri id. Il gioco le registra
@@ -306,6 +309,13 @@ function paint() {
       <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
         ${t('unlocks.megaHint')}
       </p>
+      ${megaState === null ? `<p style="font-size:11px; color:var(--red-light);">${t('unlocks.megaUnavailable')}</p>` : ''}
+      ${megaState && megaState.bracelet === false ? `
+      <div class="field-row" style="align-items:center; margin-bottom:8px;">
+        <span style="flex:1; font-size:11px; color:var(--red-light);">${t('unlocks.braceletMissing')}</span>
+        <button class="btn btn-accent" id="btnUnlockBracelet">${t('common.unlock')}</button>
+      </div>` : ''}
+      ${megaState && megaState.bracelet ? `<p style="font-size:11px; color:var(--green); margin-bottom:8px;">${t('unlocks.braceletOk')}</p>` : ''}
       ${searchBoxHtml('megaUnlockSearch', t('search.megas'), megaQuery)}
       <div class="field-row">
         <select id="megaUnlockSelect" class="field-input" style="flex:1; min-width:0;"></select>
@@ -344,16 +354,19 @@ function paint() {
       <button class="btn btn-accent w-100" id="btnUnlockLegendaries" style="margin-top:8px;">${t('unlocks.legendaries')}</button>
       <button class="btn btn-accent w-100" id="btnUnlockLegendariesShiny" style="margin-top:8px;">${t('unlocks.legendariesShiny')}</button>
     </div>
+
+    ${collectionsHtml()}
   `;
 
   const sel = document.getElementById('megaUnlockSelect');
   if (sel) {
-    const names = filterBySearch(Object.keys(MEGA_UNLOCKS), megaQuery,
-      k => searchTerms(k, speciesSearchTerms(MEGA_UNLOCKS[k].baseId)));
-    sel.innerHTML = names.length
-      ? names.map(k => `<option value="${k}">${t('unlocks.megaReq', { name: k, n: MEGA_UNLOCKS[k].req })}</option>`).join('')
+    const stones = filterBySearch(megaState?.stones || [], megaQuery,
+      s => searchTerms(s.name, s.id, speciesSearchTerms(s.species)));
+    sel.innerHTML = stones.length
+      ? stones.map(s => `<option value="${esc(s.id)}">${s.count >= s.tier ? '✓ ' : ''}${esc(t('unlocks.megaReq',
+          { name: s.name, n: Math.min(s.count, s.tier) + '/' + s.tier }))}</option>`).join('')
       : `<option value="">${t('search.noResults', { q: megaQuery })}</option>`;
-    sel.disabled = !names.length;
+    sel.disabled = !stones.length;
   }
 
   bindUnlockActions();
@@ -372,6 +385,8 @@ export async function renderMega() {
   // Le ricompense le calcola il gioco: vanno rilette dopo ogni scrittura,
   // perche' sbloccare un obiettivo ne rende esigibile il premio.
   rewards = await readAchRewards().catch(() => null);
+  megaState = await readMegaUnlocks().catch(() => null);
+  await loadCollections();
   paint();
 }
 
@@ -516,22 +531,19 @@ async function addStarters(ids, alsoShiny) {
   });
 }
 
-function unlockAllMegas() {
-  if (!currentStats) return false;
-  if (!currentStats.mvpCounts) currentStats.mvpCounts = {};
-  Object.keys(MEGA_UNLOCKS).forEach(name => {
-    const m = MEGA_UNLOCKS[name];
-    currentStats.mvpCounts[m.baseId] = Math.max(currentStats.mvpCounts[m.baseId] || 0, m.req);
-  });
-  autoSave(false);
-  return true;
+// ids null = tutte le pietre. Il Mega Bracciale si sblocca a parte: senza,
+// le pietre restano inutilizzabili anche con gli MVP al tier.
+async function unlockMegas(ids) {
+  const n = await unlockMegaStones(ids);
+  if (n == null) throw new Error(t('unlocks.megaUnavailable'));
+  return n;
 }
 
 const GOAL_ACTIONS = {
   unlockAch: async () => t('unlocks.achDone', { n: await grantAchievements() }),
   dex: async () => { await writeDex(1, 721, false); return t('unlocks.dexDone'); },
   shinyDex: async () => { await writeDex(1, 721, true); return t('unlocks.shinyDone'); },
-  megaAll: async () => unlockAllMegas() ? t('unlocks.megaDone') : t('unlocks.noStats'),
+  megaAll: async () => { await unlockMegas(null); return t('unlocks.megaDone'); },
   starters: async () => { await addStarters(baseFormStarters, false); return t('unlocks.startersDone'); },
   legendaries: async () => { await addStarters(legendaryStarters, false); return t('unlocks.legendDone'); },
   challenges: async () => t('unlocks.chalDone', { n: await grantChallenges() })
@@ -554,6 +566,7 @@ function bindUnlockActions() {
   bindSearchBox('achSearch', (value) => { achQuery = value; paint(); });
   bindSearchBox('chalSearch', (value) => { chalQuery = value; paint(); });
   bindSearchBox('megaUnlockSearch', (value) => { megaQuery = value; paint(); });
+  bindCollections(runAction);
 
   document.getElementById('btnClaimRewards')?.addEventListener('click', () => {
     runAction(async () => {
@@ -613,7 +626,8 @@ function bindUnlockActions() {
       await addStarters(baseFormStarters, false);
       await addStarters(legendaryStarters, true);
       steps.push('starter');
-      if (unlockAllMegas()) steps.push('mega');
+      await unlockMegas(null);
+      steps.push('mega');
       if (catalog.challenges?.length) { await grantChallenges(); steps.push('sfide'); }
       await maxStoryCounters();
       // Gli achievement vanno per ultimi: molti si valutano sui progressi
@@ -625,15 +639,20 @@ function bindUnlockActions() {
   });
 
   document.getElementById('btnUnlockSingleMega')?.addEventListener('click', () => {
-    if (!currentStats) return setStatus(t('unlocks.noStats'), 'err');
-    const name = document.getElementById('megaUnlockSelect').value;
-    const m = MEGA_UNLOCKS[name];
-    if (!m) return;
-    if (!currentStats.mvpCounts) currentStats.mvpCounts = {};
-    currentStats.mvpCounts[m.baseId] = Math.max(currentStats.mvpCounts[m.baseId] || 0, m.req);
-    autoSave(false);
-    paint();
-    setStatus(t('unlocks.megaOne', { name }), 'ok');
+    const id = document.getElementById('megaUnlockSelect').value;
+    const stone = megaState?.stones.find(s => s.id === id);
+    if (!stone) return;
+    runAction(async () => {
+      await unlockMegas([id]);
+      return t('unlocks.megaOne', { name: stone.name });
+    }, t('unlocks.working'));
+  });
+
+  document.getElementById('btnUnlockBracelet')?.addEventListener('click', () => {
+    runAction(async () => {
+      if (!await unlockMegaBracelet()) throw new Error(t('unlocks.megaUnavailable'));
+      return t('unlocks.braceletDone');
+    }, t('unlocks.working'));
   });
 
   document.getElementById('btnUnlockAllMegas')?.addEventListener('click', () => {

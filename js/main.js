@@ -10,6 +10,7 @@ import { initAddListeners } from './tabs/add.js';
 import { renderSettings, loadSettings } from './tabs/settings.js';
 import { DONATION_URL, storeReviewUrl, isInstalledFromStore } from './constants.js';
 import { applyStaticTranslations, t } from './i18n.js';
+import { showWhatsNew } from './whatsnew.js';
 
 import { renderTeam } from './tabs/team.js';
 import { renderAdd } from './tabs/add.js';
@@ -111,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Start
   loadData();
+  showWhatsNew();
 });
 
 // Handle image errors globally for CSP

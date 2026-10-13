@@ -8,6 +8,71 @@ sul Chrome Web Store, che accetta solo numeri **strettamente crescenti**.
 
 ---
 
+## [2.3.0] — 13 ottobre 2026
+
+### Corretto
+
+- **Sblocco delle Mega**: scriveva gli MVP nella chiave sbagliata. Il gioco non
+  legge più `poke_stats` (nel suo codice non compare più) ma
+  `poke_challenge_stats.mvpCounts`, sommando gli MVP di **tutta la linea
+  evolutiva** (`megaLineMvpCount`). L'editor sceglieva l'ultima chiave che
+  conteneva `"mvpCounts"`, e da quando sono due il risultato dipendeva dal caso.
+  Ora pietre, tier richiesti (1, 5, 10 o 50) e conteggi vengono letti dal gioco
+  (`MEGA_STONES`), e a ogni pietra si aggiunge solo ciò che manca. Il menu
+  mostra il conteggio di ciascuna (`26/10`). La lista fissa `MEGA_UNLOCKS` è
+  stata rimossa.
+- **Mega Bracciale**: senza, il gioco non lascia usare nessuna pietra
+  (`ownsMegaStone`). Non è un flag: il gioco lo considera ottenuto quando la
+  Hall of Fame contiene una scalata della Torre allo **stadio 6** senza sfida.
+  La scheda Sblocchi ora mostra se c'è e, se manca, lo sblocca aggiungendo
+  quella voce con la funzione del gioco (`saveHallOfFameEntry`), a squadra
+  vuota per non sbloccare altri starter.
+- **Run Endless 2.0 in pausa**: quando si passa a un'altra modalità il gioco
+  sposta la run in `poke_parked_run:endless2` (run e stato della Torre insieme)
+  e `poke_current_run` sparisce, quindi l'editor diceva "nessuna run". Ora la
+  carica, la modifica e la salva nella stessa chiave. La run in corso, se c'è,
+  ha sempre la precedenza.
+- **PokéDollari fuori scala**: oltre `Number.MAX_SAFE_INTEGER` JavaScript perde
+  precisione (un salvataggio reale conteneva `99999999999659420`). Il valore
+  ora è limitato a 999.999.999.999, e uno già oltre viene riparato alla lettura.
+- **Pulsanti ±1.000 / 5.000 / 10.000 ₽** della scheda Run: non avevano alcun
+  gestore e non facevano nulla.
+- **Slot passivi in Endless 2.0**: senza `erPassiveSlots` nel salvataggio
+  l'editor ne contava 5, il gioco parte da 6.
+
+### Aggiunto
+
+- **Endless 2.0** (scheda Run, solo per le run Endless 2.0):
+  - **Oggetto Firma**: uno per ciascuna delle 366 linee evolutive (Ossospesso
+    per Cubone, Elettropalla per Pikachu…). Si sceglie quale Pokémon della
+    squadra lo tiene: il menu offre per ognuno l'oggetto della sua linea,
+    risolto dal gioco (`SIG_BY_ROOT`), con la descrizione dell'effetto.
+    L'editor scrive `run.erSignature = { id, uid }` come `sigAcquire`.
+  - **Slot passivi** (6–10) e **livelli extra alle catture**
+    (`erCatchLevelBonus`).
+  - **Modalità** (Hardcore o Creativa), solo in lettura: cambia curva e record.
+- **Potenziamento dei Pokémon** (scheda Squadra, nelle run Endless): il campo
+  `_augmentPct` (bonus su tutte le statistiche) e, per i mutanti, la forza
+  della mutazione `_mutationPct`. I PS massimi vengono riscalati come in
+  `_recalcMaxHp` del gioco, conservando la percentuale di PS.
+- **SpireMon** (scheda Sblocchi): carte possedute e shiny sul totale,
+  gettoni, sblocco di tutte le carte, di tutte le shiny e della costruzione del
+  mazzo. Catalogo letto dal gioco (`SPIRE_CARDS`); missioni e altri campi di
+  `poke_spire_cards` restano invariati.
+- **Frammenti leggendari** (scheda Sblocchi): numero di frammenti e uova di
+  fila senza shiny, con la probabilità shiny del prossimo uovo leggendario
+  (1% + 0,3% per uovo, da `rollLegendaryEggShiny`) e un pulsante per renderlo
+  certo.
+
+### Modificato
+
+- **Avviso delle novità**: mostra le voci di tutte le versioni uscite dopo
+  l'ultima vista, così chi salta un aggiornamento non perde quelle intermedie.
+- **Scheda Squadra**: il pannello di modifica di un Pokémon resta aperto
+  quando la scheda si ridisegna.
+
+---
+
 ## [2.2.1] — 13 ottobre 2026
 
 ### Corretto
@@ -20,6 +85,15 @@ sul Chrome Web Store, che accetta solo numeri **strettamente crescenti**.
   `eggLegendaryShinies`. L'editor ora aggiorna quell'indice dentro la pagina,
   partendo da `getHofIndex()` del gioco per non perdere gli sblocchi già
   ricavati dalla Hall of Fame. Anche i contatori del cruscotto leggono da lì.
+
+### Aggiunto
+
+- **Avviso delle novità dopo un aggiornamento**: la prima volta che si apre il
+  popup con una versione nuova compare un riquadro con le modifiche, tradotto
+  nelle 6 lingue, che si chiude con "Ho capito". Chrome aggiorna l'estensione
+  da solo ma non lo comunica. Il popup confronta la versione del manifest con
+  l'ultima chiusa (chiave `pkeditor_whatsnew_seen`): nessun permesso né service
+  worker in più. Le voci stanno in `js/whatsnew.js`.
 
 ### Modificato
 

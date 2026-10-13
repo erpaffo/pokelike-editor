@@ -15,6 +15,24 @@ const MUTATION_PCT = 50;
 // Il menu del tier arriva a 2, che il gioco indica come massimo.
 const MAX_MOVE_TIER = 2;
 
+// Parte dei PS massimi che dipende dai bonus percentuali, come in _recalcMaxHp
+// del gioco: (1 + 5% per vitamina PS + mutazione) x (1 + potenziamento).
+// Cambiando uno di questi bonus i PS si riscalano dello stesso rapporto, cosi'
+// non serve rifare la formula base e la percentuale di PS resta quella.
+function hpFactor(pk) {
+  return (1 + 0.05 * (pk.statBuffs?.hp || 0) + (pk._mutationPct || 0) / 100)
+    * (1 + (pk._augmentPct || 0) / 100);
+}
+
+function rescaleHp(pk, before) {
+  const after = hpFactor(pk);
+  if (!before || !(pk.maxHp > 0) || after === before) return;
+  const ratio = after / before;
+  const fainted = pk.currentHp <= 0;
+  pk.maxHp = Math.max(1, Math.floor(pk.maxHp * ratio));
+  pk.currentHp = fainted ? 0 : Math.min(pk.maxHp, Math.max(1, Math.round(pk.currentHp * ratio)));
+}
+
 // Lo sprite shiny e' un percorso diverso: cambiare isShiny senza aggiornarlo
 // lascerebbe l'immagine della forma normale.
 function spritePath(speciesId, shiny) {
@@ -56,12 +74,14 @@ export function setMutationType(idx, newType) {
   const pk = currentRun.team[idx];
   if (!pk) return;
   const base = baseTypesOf(pk);
+  const before = hpFactor(pk);
 
   if (!newType) {
     delete pk._mutated;
     delete pk._mutationType;
     delete pk._mutationPct;
     pk.types = base;
+    rescaleHp(pk, before);
     return;
   }
 
@@ -69,6 +89,7 @@ export function setMutationType(idx, newType) {
   pk._mutationType = newType;
   pk._mutationPct = pk._mutationPct ?? MUTATION_PCT;
   pk.types = [...base, newType];
+  rescaleHp(pk, before);
 }
 
 
@@ -120,6 +141,8 @@ function itemOptionsHtml(pk, heldItemId, query) {
 // Un testo cercato per ogni slot della squadra. Restano fuori dalla funzione di
 // disegno perche' la scheda si ridisegna a ogni modifica.
 const itemQueries = {};
+// Pannelli di modifica aperti: restano aperti quando la scheda si ridisegna.
+const openPanels = new Set();
 
 export function renderTeam() {
   const el = document.getElementById('contentTeam');
@@ -195,7 +218,7 @@ export function renderTeam() {
       </div>
 
       <!-- ADVANCED STATS PANEL -->
-      <div class="adv-stats-panel" id="advStats_${idx}">
+      <div class="adv-stats-panel${openPanels.has(idx) ? ' active' : ''}" id="advStats_${idx}">
         <div>
           <div style="font-size:11px; color:var(--gold); margin-bottom:8px; font-weight:700;">${t('team.numericEdit')}</div>
           
@@ -239,6 +262,18 @@ export function renderTeam() {
             </select>
             <span class="field-label" style="font-size:10px;">${t('team.mutationExtra')}</span>
           </div>
+          ${pk._mutationType ? `
+          <div class="field-row">
+            <label class="field-label" style="width:50px;" title="${esc(t('team.mutationPctTitle'))}">${t('team.mutationPct')}</label>
+            <input type="number" min="0" class="field-input bind-team" data-field="_mutationPct" data-idx="${idx}" value="${pk._mutationPct || 0}" style="width:60px;">
+            <span class="field-label" style="font-size:10px;">${t('team.mutationPctHint')}</span>
+          </div>` : ''}
+          ${currentRun.isEndlessMode ? `
+          <div class="field-row">
+            <label class="field-label" style="width:50px;" title="${esc(t('team.augmentTitle'))}">${t('team.augment')}</label>
+            <input type="number" min="0" class="field-input bind-team" data-field="_augmentPct" data-idx="${idx}" value="${pk._augmentPct || 0}" style="width:60px;">
+            <span class="field-label" style="font-size:10px;">${t('team.augmentHint')}</span>
+          </div>` : ''}
 
           <div class="field-row">
             <label class="field-label" style="width:50px;">${t('team.tier')}</label>
@@ -325,6 +360,8 @@ export function renderTeam() {
   document.querySelectorAll('[data-remove]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       currentRun.team.splice(parseInt(e.currentTarget.dataset.remove), 1);
+      // Gli indici scalano: i pannelli aperti indicherebbero altri Pokemon.
+      openPanels.clear();
       autoSave();
       renderTeam();
     });
@@ -334,7 +371,8 @@ export function renderTeam() {
     btn.addEventListener('click', (e) => {
       const idx = e.currentTarget.dataset.edit;
       const panel = document.getElementById(`advStats_${idx}`);
-      panel.classList.toggle('active');
+      const open = panel.classList.toggle('active');
+      if (open) openPanels.add(Number(idx)); else openPanels.delete(Number(idx));
     });
   });
 
@@ -382,8 +420,19 @@ export function renderTeam() {
         }
       } else if (field === '_mutationType') {
         setMutationType(idx, val);
-        const badges = document.getElementById(`types_${idx}`);
-        if (badges) badges.innerHTML = typeBadgesHtml(currentRun.team[idx]);
+        autoSave();
+        renderTeam();
+        return;
+      } else if (field === '_augmentPct' || field === '_mutationPct') {
+        // Bonus percentuali: cambiano i PS massimi, che il gioco ricalcola
+        // solo al prossimo aumento di livello. Si riscalano subito.
+        const pk = currentRun.team[idx];
+        const before = hpFactor(pk);
+        pk[field] = Math.max(0, val);
+        rescaleHp(pk, before);
+        autoSave();
+        renderTeam();
+        return;
       } else {
         currentRun.team[idx][field] = val;
       }

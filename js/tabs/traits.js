@@ -1,4 +1,4 @@
-import { currentRun, autoSave, traitCatalog } from '../state.js';
+import { currentRun, autoSave, traitCatalog, runSource } from '../state.js';
 import { setStatus, esc } from '../ui.js';
 import { t } from '../i18n.js';
 import { typeName, ALL_TYPES } from '../pokemonTypes.js';
@@ -367,7 +367,7 @@ async function applyPlan() {
   // La cache dell'HUD viene riallineata subito: il gioco la ricalcolera'
   // comunque alla lotta seguente, ma cosi' i numeri coincidono da subito.
   const tiers = computeTraitTiers(currentRun.team, currentRun.passives || [], isLegendary);
-  writeTraitTiersCache(tiers).catch(() => {});
+  writeTraitTiersCache(tiers, runSource).catch(() => {});
 
   renderTraits();
   setStatus(t('traits.applied', {

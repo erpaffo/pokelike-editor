@@ -243,6 +243,22 @@
         color: var(--red-light);
       }
 
+      /* ── Avviso novita' dopo un aggiornamento ── */
+      .whatsnew {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 20px;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--text);
+      }
+      .whatsnew-body { flex: 1; }
+      .whatsnew ul { margin: 4px 0 0; padding-left: 18px; color: var(--text-muted); }
+      .whatsnew-close { flex-shrink: 0; }
+
       /* ── Buttons ── */
       .btn {
         padding: 8px 16px;
@@ -766,6 +782,9 @@
                 style="flex: 1"
               />
             </div>
+
+          <!-- ENDLESS 2.0 (contenuto generato da js/tabs/run.js) -->
+          <div class="section" id="endless2Section" style="margin-top:16px; display:none;"></div>
 
           <!-- OGGETTI PASSIVI (contenuto generato da js/tabs/run.js) -->
           <div class="section" id="passivesSection" style="margin-top:16px;"></div>

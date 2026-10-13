@@ -27,10 +27,13 @@ Poi apri `https://pokelike.xyz`, avvia una run e clicca l'icona dell'estensione.
 
 - **Squadra**: modifica livello, HP, IV, natura, felicità, shiny, strumento tenuto, tier mosse; cura completa.
   Due scorciatoie: rendere shiny tutta la squadra (aggiornando anche gli sprite) e portare tutte le mosse al tier massimo.
+  Nelle run Endless anche il potenziamento (`_augmentPct`) e la forza della mutazione (`_mutationPct`), con i PS massimi riscalati come in `_recalcMaxHp`.
 - **Megapietre**: assegnabili dalla squadra o dallo zaino. Strumento e pietra condividono lo stesso slot (`heldItem`), quindi il menu è unico e diviso in gruppi. Per ogni Pokémon si offrono solo le pietre della sua specie, perché `syncMegaForm` applica la forma solo se `megaSpecies === speciesId`. L'oggetto lo costruisce il gioco con `makeMegaStoneItem()`, letto a runtime.
 - **Mutazioni**: cambia, aggiungi o rimuovi il tipo extra dei Pokémon mutanti dell'Endless (`_mutationType`), tenendolo allineato con `types`.
 - **Aggiungi**: inserisci qualsiasi Pokémon (Gen 1–6) con ricerca e filtri per tipo/generazione.
-- **Run**: PokéDollari, medaglie, mappa corrente, modalità Nuzlocke/Endless, editor dei nodi mappa.
+- **Run**: PokéDollari (fino a 999.999.999.999, oltre JavaScript perde precisione), medaglie, mappa corrente, modalità Nuzlocke/Endless, editor dei nodi mappa.
+  Se non c'è una run in corso viene caricata quella **Endless 2.0 in pausa** (`poke_parked_run:endless2`, dove il gioco la sposta quando si cambia modalità), e le modifiche tornano in quella chiave.
+- **Endless 2.0**: Oggetto Firma (uno per ognuna delle 366 linee evolutive, `run.erSignature = { id, uid }`, risolto dal gioco con `SIG_BY_ROOT`), slot passivi 6–10, livelli extra alle catture (`erCatchLevelBonus`); la modalità Hardcore/Creativa è mostrata in sola lettura.
 - **Oggetti passivi**: scegli quali passivi tenere nella run, letti da `PASSIVE_ITEM_POOL`. Gli slot seguono la regola del gioco: in Endless `min(10, run.erPassiveSlots)`, altrimenti `run.challengePassiveCap` o 5.
 - **Zaino**: aggiunge strumenti tenuti (held item) rispettando i 10 slot e il limite di un esemplare per tipo.
 - **Vitamine**: porta al massimo i bonus statistica (10 per statistica, +5% ciascuno) per un singolo starter o per tutti e 366. Le vitamine si danno fuori dalla run e il gioco le conserva in `poke_stat_buffs` **per capostipite della linea evolutiva**, non per esemplare: il bersaglio sono quindi i Pokémon di primo stadio selezionabili (forme base e leggendari), non la squadra. Attacco copre atk e special insieme, perché la Proteina del gioco li alza in coppia e `getTotalBuffPoints` li conta una volta sola.
@@ -39,8 +42,11 @@ Poi apri `https://pokelike.xyz`, avvia una run e clicca l'icona dell'estensione.
 - **Megapietre ricostruite**: 11 forme Mega dei dati del gioco non hanno una pietra (Charizard X, Swampert, Camerupt, Zygarde, Starmie, Pyroar, Froslass, Floette, Malamar, Chimecho, Golurk). `syncMegaForm` legge tutto dall'oggetto tenuto e non da `MEGA_STONES`, quindi l'editor le costruisce dai dati della forma. Stanno in un gruppo a parte perché non danno l'abilità Mega, cercata per id della pietra vera.
 - **Editor mappa per modalità**: 22 tipi di nodo, offerti solo dove il gioco può generarli. Poke Mart e squadra cattiva esistono solo nella Torre **dalla mappa 31** (`ER_NODE_BANDS`); Silver, Magma/Aqua, Sottosuolo, Mondo Distorto e Rivale N solo fuori dalla Torre e nella generazione giusta; Ricompensa e Uscita solo nelle sotto-mappe. Dei tipi esclusi viene spiegato il motivo.
 - **Sblocchi**: cruscotto di completamento ("Platino"), megaevoluzioni, Pokédex/Shiny Dex per regione, starter e leggendari.
+  Le Mega seguono la regola del gioco (`ownsMegaStone`): Mega Bracciale, cioè una scalata della Torre allo stadio 6 senza sfida in Hall of Fame, e MVP della linea evolutiva in `poke_challenge_stats.mvpCounts` almeno pari al tier della pietra (1/5/10/50). Pietre e conteggi si leggono dal gioco.
   Starter e leggendari selezionabili stanno in `poke_hof_index`, l'indice che il gioco ricava da Hall of Fame e uova: l'editor lo aggiorna partendo da `getHofIndex()`, e completare lo Shiny Dex riempie anche `shinySpecies`.
   Comprende le sfide base, monotipo, settimanali e giornaliere (tutte in `poke_challenges_done`, ognuna con il suo id), gli obiettivi attivabili uno per uno, e la riscossione delle ricompense obiettivo rimaste in sospeso — conteggio e pagamento li fa il gioco con `countClaimableAchRewards` / `claimAllAchRewards`.
+- **SpireMon**: carte possedute e shiny, gettoni, costruzione del mazzo (`poke_spire_cards`), con il catalogo `SPIRE_CARDS` letto dal gioco.
+- **Frammenti leggendari**: frammenti e uova di fila senza shiny, con la probabilità shiny del prossimo uovo leggendario (1% + 0,3% per uovo).
 - **Backup**: copia del salvataggio prima di modificarlo, con ripristino, export e import su file. Ultimi 5 conservati in `chrome.storage.local`.
   Il ripristino gestisce la sincronizzazione cloud del gioco (vedi sotto), altrimenti verrebbe annullato al ricaricamento.
 - **Lingue**: interfaccia in italiano, inglese, spagnolo, francese, tedesco e portoghese, selezionabile dalle impostazioni.
@@ -113,6 +119,7 @@ js/
   state.js            # stato condiviso + I/O localStorage della pagina
   page.js             # ponte verso la scheda del gioco (mondi ISOLATED / MAIN)
   backup.js           # backup/ripristino del salvataggio + import/export file
+  whatsnew.js         # riquadro delle novità dopo un aggiornamento
   i18n.js             # dizionario a 6 lingue e helper t()
   modal.js            # dialogo a scelta multipla
   pokemonTypes.js     # tipi e base stats #1–#721 (generati da PokeAPI)
@@ -121,7 +128,7 @@ js/
   mapNodes.js         # tipi di nodo mappa ammessi per modalità
   ui.js               # helper UI
   constants.js        # nomi Pokémon, held item, mega, liste starter, DONATION_URL
-  tabs/               # una vista per scheda (squadra, aggiungi, run, zaino, vitamine, tratti, opzioni)
+  tabs/               # una vista per scheda (squadra, aggiungi, run, zaino, vitamine, tratti, sblocchi, collezioni, opzioni)
 src/
   pause-cloud-sync.js # mette in pausa la sync del gioco durante un ripristino
   force-traits.js     # tratti forzati (registrato solo se attivato)

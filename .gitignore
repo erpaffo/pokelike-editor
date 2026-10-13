@@ -18,3 +18,6 @@ Thumbs.db
 
 # Screenshot della vecchia versione a pagamento, non più rappresentativi
 store_assets/vecchi_screenshot_PRO/
+
+# Dump del localStorage del gioco (contiene token e nome utente)
+localStorage*.txt

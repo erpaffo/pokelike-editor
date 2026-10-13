@@ -1,7 +1,7 @@
 # Chrome Web Store — scheda completa
 
 Tutto ciò che va incollato nella Developer Dashboard, campo per campo.
-Versione del pacchetto: **2.2.1**.
+Versione del pacchetto: **2.3.0**.
 
 ---
 
