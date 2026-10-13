@@ -1,6 +1,7 @@
 import { esc } from '../ui.js';
 import { t } from '../i18n.js';
 import { readSpire, writeSpire, readSaveKeys, writeSaveKeys } from '../page.js';
+import { isBroken, assertFeature, disabledHtml } from '../compat.js';
 
 // Collezioni fuori dalla run, mostrate in fondo alla scheda Sblocchi:
 // SpireMon (il gioco di carte) e i frammenti per le uova leggendarie.
@@ -35,6 +36,7 @@ function shinyChancePct(p) {
 }
 
 function spireHtml() {
+  if (isBroken('spire')) return disabledHtml('spire');
   if (spire === undefined) return `<p style="font-size:11px; color:var(--text-muted);">${t('spire.loading')}</p>`;
   if (!spire) return `<p style="font-size:11px; color:var(--red-light);">${t('spire.unavailable')}</p>`;
   const allCards = spire.owned >= spire.total;
@@ -59,6 +61,7 @@ function spireHtml() {
 }
 
 function shardsHtml() {
+  if (isBroken('shards')) return disabledHtml('shards');
   return `
     <div class="field-row">
       <label class="field-label" style="width:150px;">${t('shards.count')}</label>
@@ -95,6 +98,7 @@ export function collectionsHtml() {
 // rileggendo anche queste collezioni.
 export function bindCollections(runAction) {
   const spireOp = (op, value, msgKey) => runAction(async () => {
+    assertFeature('spire');
     if (!await writeSpire(op, value)) throw new Error(t('spire.unavailable'));
     return t(msgKey);
   }, t('unlocks.working'));
@@ -108,6 +112,7 @@ export function bindCollections(runAction) {
   });
 
   const saveShards = (newPity) => runAction(async () => {
+    assertFeature('shards');
     const n = Math.max(0, parseInt(document.getElementById('legendShards')?.value, 10) || 0);
     const p = newPity ?? Math.max(0, parseInt(document.getElementById('legendPity')?.value, 10) || 0);
     await writeSaveKeys({

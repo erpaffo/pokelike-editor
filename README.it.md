@@ -105,6 +105,28 @@ Connessioni di rete in uscita:
 Nessun altro host viene contattato: niente API esterne, font remoti o CDN.
 Statistiche base e tipi (#1–#721) sono inclusi in `js/pokemonTypes.js`.
 
+## Compatibilità con gli aggiornamenti del gioco
+
+L'editor dipende da funzioni, costanti e chiavi di pokelike.xyz che gli
+sviluppatori possono rinominare in qualsiasi momento. Tutto ciò che usa è
+elencato, funzione per funzione, in [`js/compat-requirements.js`](js/compat-requirements.js),
+e viene controllato in due momenti:
+
+- **All'apertura del popup** ([`js/compat.js`](js/compat.js)): si verifica che
+  le globali del gioco esistano ancora e che le chiavi scritte direttamente
+  abbiano la forma attesa. Una funzione che ha perso qualcosa si **disattiva**,
+  con un avviso e un pulsante che apre una issue già compilata: il salvataggio
+  non viene mai scritto in un formato che il gioco non riconosce.
+- **Ogni giorno su GitHub** ([`tools/game-watch/`](tools/game-watch/) e il
+  workflow [`game-watch.yml`](.github/workflows/game-watch.yml)): la sentinella
+  scarica il gioco, ne decodifica le stringhe offuscate e cerca ogni elemento
+  dell'elenco. Se qualcosa manca, o se esce una nuova versione del gioco, apre
+  una issue con l'etichetta `game-watch`, il rapporto e le note di patch nuove.
+
+Si può lanciare anche a mano: `npm run game-watch` (Node 22, nessuna dipendenza).
+Dopo aver verificato l'editor con una nuova versione del gioco va aggiornato
+`TESTED_GAME_VERSION` in `js/compat-requirements.js`.
+
 ## Sviluppo
 
 Codice sorgente diretto, nessun passaggio di build: il popup carica
@@ -119,6 +141,8 @@ js/
   state.js            # stato condiviso + I/O localStorage della pagina
   page.js             # ponte verso la scheda del gioco (mondi ISOLATED / MAIN)
   backup.js           # backup/ripristino del salvataggio + import/export file
+  compat.js           # controllo di compatibilità all'apertura del popup
+  compat-requirements.js # cosa l'editor usa del gioco, funzione per funzione
   whatsnew.js         # riquadro delle novità dopo un aggiornamento
   i18n.js             # dizionario a 6 lingue e helper t()
   modal.js            # dialogo a scelta multipla
@@ -133,6 +157,7 @@ src/
   pause-cloud-sync.js # mette in pausa la sync del gioco durante un ripristino
   force-traits.js     # tratti forzati (registrato solo se attivato)
 store_assets/         # icone, screenshot e testi per il Chrome Web Store
+tools/game-watch/     # sentinella giornaliera (GitHub Actions)
 _locales/             # chrome.i18n: nome e descrizione del pacchetto
   it|en|es|fr|de|pt/messages.json
 ```

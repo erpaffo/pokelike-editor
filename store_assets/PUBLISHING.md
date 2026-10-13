@@ -17,6 +17,8 @@
    (ora `2.3.0`). Aggiungi anche la voce della stessa versione in
    `js/whatsnew.js`: è il riquadro «novità» che gli utenti vedono dopo
    l'aggiornamento (senza voce non compare nulla).
+   Se hai verificato l'editor su una nuova versione del gioco, aggiorna
+   `TESTED_GAME_VERSION` in `js/compat-requirements.js`.
 4. Carica l'estensione non pacchettizzata in `chrome://extensions` e prova ogni
    scheda su `pokelike.xyz` con una run attiva.
 

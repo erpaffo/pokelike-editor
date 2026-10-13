@@ -3,6 +3,7 @@ import {
   POKEMON_NAMES, MAX_POKEDOLLARS
 } from '../state.js';
 import { readSignatureItems } from '../page.js';
+import { isBroken, disabledHtml } from '../compat.js';
 import {
   NODE_IDS, NODE_INFO, availableNodeTypes, unavailableReason, isSubMap, towerMapIndex
 } from '../mapNodes.js';
@@ -152,6 +153,10 @@ function renderEndless2() {
   if (!host) return;
   if (!isEndless2(currentRun)) { host.innerHTML = ''; host.style.display = 'none'; return; }
   host.style.display = '';
+  if (isBroken('endless2')) {
+    host.innerHTML = `<div class="section-title">🗼 ${t('er.title')}</div>${disabledHtml('endless2')}`;
+    return;
+  }
 
   const team = (currentRun.team || []).filter(pk => pk && pk.speciesId);
   const key = team.map(pk => pk.speciesId).join(',');
@@ -169,7 +174,9 @@ function renderEndless2() {
   const holder = currentRun.erSignature?.uid;
 
   let sigHtml;
-  if (sigBySpecies === undefined) {
+  if (isBroken('signature')) {
+    sigHtml = disabledHtml('signature');
+  } else if (sigBySpecies === undefined) {
     sigHtml = `<p style="font-size:11px; color:var(--text-muted);">${t('er.sigLoading')}</p>`;
   } else if (!sigBySpecies) {
     sigHtml = `<p style="font-size:11px; color:var(--red-light);">${t('er.sigUnavailable')}</p>`;

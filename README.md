@@ -104,6 +104,28 @@ Outgoing network connections:
 No other host is contacted: no external APIs, remote fonts or CDNs.
 Base stats and types (#1–#721) are bundled in `js/pokemonTypes.js`.
 
+## Keeping up with game updates
+
+The editor depends on functions, constants and keys of pokelike.xyz that the
+developers can rename at any time. Everything it uses is listed, feature by
+feature, in [`js/compat-requirements.js`](js/compat-requirements.js), and it is
+checked at two points:
+
+- **When the popup opens** ([`js/compat.js`](js/compat.js)): the game's globals
+  must still exist and the keys written directly must have the expected shape.
+  A feature that lost something is **turned off**, with a notice and a button
+  that opens a prefilled issue: the save is never written in a format the game
+  no longer recognises.
+- **Every day on GitHub** ([`tools/game-watch/`](tools/game-watch/) and the
+  [`game-watch.yml`](.github/workflows/game-watch.yml) workflow): the watcher
+  downloads the game, decodes its obfuscated strings and looks for every item
+  on the list. If something is missing, or a new game version ships, it opens an
+  issue labelled `game-watch` with the report and the new patch notes.
+
+It can also be run by hand: `npm run game-watch` (Node 22, no dependencies).
+After checking the editor against a new game version, update
+`TESTED_GAME_VERSION` in `js/compat-requirements.js`.
+
 ## Development
 
 Plain source code, no build step: the popup loads `pokemonData.js` (classic
@@ -118,6 +140,8 @@ js/
   state.js            # shared state + page localStorage I/O
   page.js             # bridge to the game tab (ISOLATED / MAIN worlds)
   backup.js           # save backup/restore + file import/export
+  compat.js           # compatibility check when the popup opens
+  compat-requirements.js # what the editor uses from the game, per feature
   whatsnew.js         # "what's new" banner after an update
   i18n.js             # 6-language dictionary and t() helper
   modal.js            # multiple-choice dialog
@@ -132,6 +156,7 @@ src/
   pause-cloud-sync.js # pauses the game's sync during a restore
   force-traits.js     # forced traits (registered only when enabled)
 store_assets/         # icons, screenshots and texts for the Chrome Web Store
+tools/game-watch/     # daily watcher (GitHub Actions)
 _locales/             # chrome.i18n: package name and description
   it|en|es|fr|de|pt/messages.json
 ```

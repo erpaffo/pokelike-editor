@@ -1,0 +1,56 @@
+# Ogni giorno controlla che pokelike.xyz contenga ancora tutto cio' che
+# l'editor usa (js/compat-requirements.js). Se qualcosa sparisce, o se esce una
+# nuova versione del gioco, apre una issue con il rapporto: arriva come notifica
+# e-mail a chi segue la repository.
+name: Compatibilità con pokelike.xyz
+
+on:
+  schedule:
+    - cron: '17 6 * * *'   # ogni giorno alle 06:17 UTC
+  workflow_dispatch: {}     # avvio manuale dalla scheda Actions
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Controlla il gioco
+        id: watch
+        run: node tools/game-watch/check.mjs
+
+      - name: Apri una issue se serve
+        if: steps.watch.outputs.problem == 'true'
+        uses: actions/github-script@v7
+        env:
+          TITLE: ${{ steps.watch.outputs.title }}
+        with:
+          script: |
+            const fs = require('fs');
+            const title = process.env.TITLE;
+            const body = fs.readFileSync('game-watch-report.md', 'utf8')
+              + `\n\n---\nRapporto generato da [questa esecuzione](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`;
+
+            // Una sola issue aperta per ogni situazione: se ne esiste gia' una
+            // con lo stesso titolo il controllo di oggi non aggiunge nulla.
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'game-watch', per_page: 100
+            });
+            if (open.some(issue => issue.title === title)) {
+              core.info(`Issue già aperta: ${title}`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title, body, labels: ['game-watch']
+            });

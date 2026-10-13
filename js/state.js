@@ -2,6 +2,7 @@ import { POKEMON_NAMES_FALLBACK } from './constants.js';
 import { setStatus } from './ui.js';
 import { t, getLanguage } from './i18n.js';
 import { renderAll } from './main.js';
+import { isBroken } from './compat.js';
 import {
   readMegaStones, readPassivePool, readTraitCatalog,
   readEndlessState, readExtraMegaForms, readItemAliases, readSpeciesAliases
@@ -221,6 +222,13 @@ export function autoSave(showMessage = true) {
   saveMoney();
 
   if (!currentRun) return;
+
+  // La run parcheggiata si riscrive dentro una chiave del gioco: se il suo
+  // formato e' cambiato meglio non toccarla.
+  if (runSource && runSource !== LIVE_RUN_KEY && isBroken('parkedRun')) {
+    setStatus(t('compat.featureOff', { name: t('compat.f.parkedRun') }), 'err');
+    return;
+  }
 
   saveTimer = setTimeout(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

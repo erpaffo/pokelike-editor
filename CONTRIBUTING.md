@@ -16,6 +16,11 @@ l'estensione dopo ogni modifica.
 - **Leggere dal gioco, non duplicare**: quando un dato esiste nella pagina
   (cataloghi, traduzioni, funzioni come `makeMegaStoneItem`), va letto a runtime
   tramite `js/page.js` invece di copiarlo nell'estensione.
+- **Simboli del gioco**: ogni funzione, costante o chiave di pokelike.xyz che il
+  codice usa va aggiunta in `js/compat-requirements.js`, sotto la funzione
+  dell'editor che ne dipende. Prima di ogni scrittura che dipende dal formato
+  del gioco chiama `assertFeature('<funzione>')` di `js/compat.js`. Così il
+  controllo nel popup e la sentinella giornaliera la tengono d'occhio.
 - **Traduzioni**: ogni nuova stringa dell'interfaccia va aggiunta in tutte e sei
   le lingue di `js/i18n.js` (it, en, es, fr, de, pt).
 - **Permessi**: non ampliare `permissions` / `host_permissions` nel manifest senza

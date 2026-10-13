@@ -9,6 +9,7 @@ import {
 import { t, getLanguage } from '../i18n.js';
 import { filterBySearch, searchBoxHtml, bindSearchBox, searchTerms } from '../search.js';
 import { loadCollections, collectionsHtml, bindCollections } from './collections.js';
+import { assertFeature } from '../compat.js';
 
 const DEX_REGIONS = {
   ALL: [1, 721],
@@ -485,6 +486,8 @@ async function maxStoryCounters() {
 }
 
 async function writeDex(from, to, shinyOnly) {
+  // Lo Shiny Dex aggiorna anche poke_hof_index: si controlla prima di scrivere.
+  if (shinyOnly) assertFeature('starters');
   const current = await readSaveKeys(['poke_pokedex', 'poke_dex', 'poke_shiny_dex']);
   const pokedex = parse(current.poke_pokedex, {});
   const dex = parse(current.poke_dex, {});
@@ -510,6 +513,7 @@ async function writeDex(from, to, shinyOnly) {
 }
 
 async function addStarters(ids, alsoShiny) {
+  assertFeature('starters');
   if (!await unlockHofSpecies(ids, alsoShiny, legendaryStarters)) {
     throw new Error(t('unlocks.hofUnavailable'));
   }
@@ -534,6 +538,7 @@ async function addStarters(ids, alsoShiny) {
 // ids null = tutte le pietre. Il Mega Bracciale si sblocca a parte: senza,
 // le pietre restano inutilizzabili anche con gli MVP al tier.
 async function unlockMegas(ids) {
+  assertFeature('megas');
   const n = await unlockMegaStones(ids);
   if (n == null) throw new Error(t('unlocks.megaUnavailable'));
   return n;
@@ -650,6 +655,7 @@ function bindUnlockActions() {
 
   document.getElementById('btnUnlockBracelet')?.addEventListener('click', () => {
     runAction(async () => {
+      assertFeature('megas');
       if (!await unlockMegaBracelet()) throw new Error(t('unlocks.megaUnavailable'));
       return t('unlocks.braceletDone');
     }, t('unlocks.working'));

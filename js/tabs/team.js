@@ -6,6 +6,7 @@ import { getBaseStats, getTypes, typeName, ALL_TYPES } from '../pokemonTypes.js'
 import { t } from '../i18n.js';
 import { filterBySearch, searchTerms } from '../search.js';
 import { renderTraits } from './traits.js';
+import { isBroken } from '../compat.js';
 
 // I mutanti dell'Endless portano un tipo in piu' rispetto alla forma di
 // partenza. Il gioco lo registra in _mutationType e lo accoda a types
@@ -262,13 +263,13 @@ export function renderTeam() {
             </select>
             <span class="field-label" style="font-size:10px;">${t('team.mutationExtra')}</span>
           </div>
-          ${pk._mutationType ? `
+          ${pk._mutationType && !isBroken('endless2') ? `
           <div class="field-row">
             <label class="field-label" style="width:50px;" title="${esc(t('team.mutationPctTitle'))}">${t('team.mutationPct')}</label>
             <input type="number" min="0" class="field-input bind-team" data-field="_mutationPct" data-idx="${idx}" value="${pk._mutationPct || 0}" style="width:60px;">
             <span class="field-label" style="font-size:10px;">${t('team.mutationPctHint')}</span>
           </div>` : ''}
-          ${currentRun.isEndlessMode ? `
+          ${currentRun.isEndlessMode && !isBroken('endless2') ? `
           <div class="field-row">
             <label class="field-label" style="width:50px;" title="${esc(t('team.augmentTitle'))}">${t('team.augment')}</label>
             <input type="number" min="0" class="field-input bind-team" data-field="_augmentPct" data-idx="${idx}" value="${pk._augmentPct || 0}" style="width:60px;">

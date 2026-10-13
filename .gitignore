@@ -21,3 +21,6 @@ store_assets/vecchi_screenshot_PRO/
 
 # Dump del localStorage del gioco (contiene token e nome utente)
 localStorage*.txt
+
+# Rapporto della sentinella di compatibilita (tools/game-watch)
+game-watch-report.md

@@ -64,6 +64,19 @@ sul Chrome Web Store, che accetta solo numeri **strettamente crescenti**.
   (1% + 0,3% per uovo, da `rollLegendaryEggShiny`) e un pulsante per renderlo
   certo.
 
+- **Controllo di compatibilità con il gioco**: all'apertura del popup si
+  verifica che esista ancora ciò che ogni funzione usa (globali del gioco e
+  forma delle chiavi scritte direttamente, elencate in
+  `js/compat-requirements.js`). Una funzione che ha perso qualcosa si
+  disattiva, con un avviso tradotto nelle 6 lingue e un pulsante che apre una
+  issue già compilata, invece di scrivere dati in un formato che il gioco non
+  riconosce più. Se il controllo non si può fare non disattiva nulla.
+- **Sentinella giornaliera su GitHub** (`tools/game-watch/`, workflow
+  `game-watch.yml`): scarica il gioco, ne decodifica le stringhe offuscate e
+  cerca ogni elemento dell'elenco; se qualcosa manca o esce una nuova versione
+  apre una issue con il rapporto e le note di patch. Al primo giro ha trovato
+  che il gioco non usa più `poke_pokedex`: il Pokédex sta solo in `poke_dex`.
+
 ### Modificato
 
 - **Avviso delle novità**: mostra le voci di tutte le versioni uscite dopo

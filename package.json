@@ -1,0 +1,9 @@
+{
+  "name": "pokelike-editor",
+  "private": true,
+  "type": "module",
+  "description": "Estensione Chrome: nessuna build. Gli script servono solo agli strumenti di sviluppo.",
+  "scripts": {
+    "game-watch": "node tools/game-watch/check.mjs"
+  }
+}

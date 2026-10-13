@@ -11,6 +11,7 @@ import { renderSettings, loadSettings } from './tabs/settings.js';
 import { DONATION_URL, storeReviewUrl, isInstalledFromStore } from './constants.js';
 import { applyStaticTranslations, t } from './i18n.js';
 import { showWhatsNew } from './whatsnew.js';
+import { runCompatCheck, showCompatBanner } from './compat.js';
 
 import { renderTeam } from './tabs/team.js';
 import { renderAdd } from './tabs/add.js';
@@ -113,6 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start
   loadData();
   showWhatsNew();
+  // Se il gioco e' cambiato, le funzioni colpite si spengono: si ridisegna
+  // perche' le schede mostrino l'avviso al posto dei comandi.
+  runCompatCheck().then(rep => {
+    if (rep && Object.keys(rep.broken).length) {
+      showCompatBanner(rep);
+      renderAll();
+    }
+  }).catch(() => {});
 });
 
 // Handle image errors globally for CSP
