@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Pokélike Editor — Gestor de guardado",
+    "description": "Nome dell'estensione: browser, menu e titolo sul Web Store"
+  },
+  "extDescription": {
+    "message": "Edita tu partida local de pokelike.xyz: equipo, mochila, Pokédex, desbloqueos y copias. Gratis, sin cuenta.",
+    "description": "Riepilogo mostrato nel browser e sul Web Store"
+  }
+}

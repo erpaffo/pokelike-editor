@@ -1,39 +1,49 @@
-import { currentRun, allPokemon } from './state.js';
-import { loadData } from './state.js';
-import { checkProState, switchTab, setStatus } from './ui.js';
+import { loadData, currentRun } from './state.js';
+import { switchTab, setStatus } from './ui.js';
+import { reloadGameTabAndWait, resumeRun } from './page.js';
 import { initTeamListeners } from './tabs/team.js';
+import { loadForcedTraits } from './tabs/traits.js';
 import { initRunListeners } from './tabs/run.js';
 import { initBagListeners } from './tabs/bag.js';
 import { initMegaListeners } from './tabs/mega.js';
 import { initAddListeners } from './tabs/add.js';
-import { isPro } from './api.js';
+import { renderSettings, loadSettings } from './tabs/settings.js';
+import { DONATION_URL, storeReviewUrl, isInstalledFromStore } from './constants.js';
+import { applyStaticTranslations, t } from './i18n.js';
 
 import { renderTeam } from './tabs/team.js';
 import { renderAdd } from './tabs/add.js';
 import { renderRun } from './tabs/run.js';
 import { renderBag } from './tabs/bag.js';
 import { renderMega } from './tabs/mega.js';
+import { renderVitamins } from './tabs/vitamins.js';
 
 export function renderAll() {
   const activeTab = document.querySelector('.tab.active')?.dataset.tab || 'team';
-  
-  checkProState();
 
   if (activeTab === 'team') renderTeam();
   if (activeTab === 'add') renderAdd();
   if (activeTab === 'run') renderRun();
   if (activeTab === 'bag') renderBag();
   if (activeTab === 'mega') renderMega();
-  if (activeTab === 'pro') {/* pro tab has no dynamic JS render */}
+  if (activeTab === 'vitamins') renderVitamins();
+  if (activeTab === 'settings') renderSettings();
+  if (activeTab === 'donate') {/* contenuto statico, niente da renderizzare */}
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  applyStaticTranslations();
+
   // Init listeners
   initTeamListeners();
   initRunListeners();
   initBagListeners();
   initMegaListeners();
   initAddListeners();
+  // Stato dei tratti forzati: va letto dalla pagina e dalla registrazione dello
+  // script, quindi arriva dopo il primo disegno.
+  loadForcedTraits().catch(() => {});
+  loadSettings();
 
   // Tab switching
   document.querySelectorAll('.tab').forEach(tab => {
@@ -44,84 +54,71 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Reload
-  document.getElementById('btnReload')?.addEventListener('click', () => {
+  // Sincronizza: ricarica prima la pagina del gioco, poi rilegge.
+  // Il gioco tiene la partita in memoria e la riscrive nel localStorage: senza
+  // ricaricare, le modifiche fatte qui verrebbero sovrascritte al primo
+  // salvataggio automatico invece di essere applicate.
+  const reloadBtn = document.getElementById('btnReload');
+  reloadBtn?.addEventListener('click', async () => {
+    if (reloadBtn.disabled) return;
+    reloadBtn.disabled = true;
+    setStatus(t('status.reloadingGame'), '');
+
+    // La modalita' della run in corso, letta prima del ricaricamento: serve
+    // solo a decidere quale pulsante "riprendi" cercare per primo.
+    const preferred = currentRun
+      ? (currentRun.challengeId ? 'challenge' : (currentRun.isEndlessMode ? 'endless' : 'story'))
+      : null;
+
+    let resumed = null;
+    try {
+      const loaded = await reloadGameTabAndWait();
+      if (loaded && preferred) {
+        setStatus(t('status.resuming'), '');
+        resumed = await resumeRun(preferred).catch(() => null);
+      }
+    } catch (e) {
+      // Nessuna scheda del gioco aperta: si prova comunque a rileggere.
+    } finally {
+      reloadBtn.disabled = false;
+    }
+
     loadData();
+    if (resumed?.ok) setStatus(t('status.resumed'), 'ok');
   });
+
+  // Donazione (apre in una nuova scheda del browser, non nel popup)
+  document.getElementById('btnDonate')?.addEventListener('click', () => {
+    chrome.tabs.create({ url: DONATION_URL });
+  });
+
+  const rateBtn = document.getElementById('btnRate');
+  if (rateBtn) {
+    if (isInstalledFromStore()) {
+      rateBtn.addEventListener('click', () => {
+        chrome.tabs.create({ url: storeReviewUrl() });
+      });
+    } else {
+      rateBtn.disabled = true;
+      const hint = document.getElementById('rateHint');
+      if (hint) {
+        hint.dataset.i18n = 'donate.rateHint';
+        hint.textContent = t('donate.rateHint');
+        hint.hidden = false;
+      }
+    }
+  }
 
   // Start
   loadData();
 });
 
-import { unlockProUI } from './ui.js';
-import { verifyLicenseWithBackend, setIsPro } from './api.js';
-
-document.addEventListener('DOMContentLoaded', () => {
-  chrome.storage.local.get(['proLicense'], (res) => {
-    if (res.proLicense) {
-      setIsPro(true);
-      unlockProUI();
-      // Se si vuole, si potrebbe chiamare verifyLicenseWithBackend in background
+// Handle image errors globally for CSP
+document.addEventListener('error', function(e) {
+  if (e.target && e.target.tagName === 'IMG') {
+    const fallbackUrl = e.target.getAttribute('data-fallback-url');
+    if (fallbackUrl && e.target.src !== fallbackUrl) {
+      e.target.src = fallbackUrl;
     }
-  });
-  
-  document.getElementById('btnBuyPro')?.addEventListener('click', () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tab = tabs[0];
-      if (!tab) return;
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => localStorage.getItem('poke_username') || localStorage.getItem('poke_save_uuid') || null
-      }, async (results) => {
-        const accountId = results[0]?.result;
-        if (!accountId) {
-          const statusEl = document.getElementById('licenseStatus');
-          if (statusEl) {
-            statusEl.style.color = '#ff4d6d';
-            statusEl.innerText = "Non sei loggato a Pokèlike. Apri il gioco e loggati prima di acquistare.";
-          }
-          return;
-        }
-
-        try {
-          const res = await fetch('http://localhost:3000/buy/checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accountId })
-          });
-          const data = await res.json();
-          if (data.url) {
-            window.open(data.url, '_blank');
-          } else {
-            throw new Error(data.error || 'Errore di connessione a Stripe');
-          }
-        } catch (e) {
-          console.error(e);
-          const statusEl = document.getElementById('licenseStatus');
-          if (statusEl) {
-            statusEl.style.color = '#ff4d6d';
-            statusEl.innerText = "Impossibile avviare il checkout: " + e.message;
-          }
-        }
-      });
-    });
-  });
-
-  document.getElementById('btnVerifyLicense')?.addEventListener('click', () => {
-    const code = document.getElementById('licenseKeyInput').value.trim();
-    if (!code) return;
-    if (code === 'POKELIKE-PRO-2026') {
-      setIsPro(true);
-      localStorage.setItem('pokelike_premium_unlocked', 'true');
-      chrome.storage.local.set({ proLicense: code });
-      unlockProUI();
-      const statusEl = document.getElementById('licenseStatus');
-      if (statusEl) {
-        statusEl.style.color = '#28a745';
-        statusEl.innerText = 'Licenza test valida! Funzionalità Pro sbloccate.';
-      }
-      return;
-    }
-    verifyLicenseWithBackend(code, false);
-  });
-});
+  }
+}, true);

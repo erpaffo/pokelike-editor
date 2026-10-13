@@ -1,8 +1,125 @@
-import { currentRun, currentPokedollars, allPokemon, POKEMON_NAMES, autoSave } from '../state.js';
-import { isPro } from '../api.js';
-import { requirePro } from '../ui.js';
-import { typeClass, hpColor, setStatus } from '../ui.js';
-import { HELD_ITEMS } from '../constants.js';
+import { currentRun, currentPokedollars, allPokemon, POKEMON_NAMES, autoSave, megaStones, megaStonesFor, itemSearchTerms } from '../state.js';
+import { buildMegaStoneItem, buildMegaStoneItemFromDef } from '../page.js';
+import { hpColor, setStatus, esc } from '../ui.js';
+import { HELD_ITEMS, itemName, itemGameName } from '../constants.js';
+import { getBaseStats, getTypes, typeName, ALL_TYPES } from '../pokemonTypes.js';
+import { t } from '../i18n.js';
+import { filterBySearch, searchTerms } from '../search.js';
+import { renderTraits } from './traits.js';
+
+// I mutanti dell'Endless portano un tipo in piu' rispetto alla forma di
+// partenza. Il gioco lo registra in _mutationType e lo accoda a types
+// (vedi erApplyMutation), quindi i due campi vanno tenuti allineati.
+const MUTATION_PCT = 50;
+
+// Il menu del tier arriva a 2, che il gioco indica come massimo.
+const MAX_MOVE_TIER = 2;
+
+// Lo sprite shiny e' un percorso diverso: cambiare isShiny senza aggiornarlo
+// lascerebbe l'immagine della forma normale.
+function spritePath(speciesId, shiny) {
+  return shiny
+    ? `img/sprites/pokemon/shiny/${speciesId}.png`
+    : `img/sprites/pokemon/${speciesId}.png`;
+}
+
+// Tipi della forma di partenza, cioe' senza la mutazione gia' applicata.
+function baseTypesOf(pk) {
+  const types = pk.types?.length ? [...pk.types] : getTypes(pk.speciesId);
+  const extra = pk._mutationType;
+  if (!extra) return types;
+  if (types[types.length - 1] === extra) return types.slice(0, -1);
+  return types.filter(t => t !== extra);
+}
+
+// Il gioco sorteggia la mutazione fra i tipi che il Pokemon non ha gia'.
+function mutationOptionsFor(pk) {
+  const base = baseTypesOf(pk);
+  return ALL_TYPES.filter(type => !base.includes(type));
+}
+
+function typeBadgesHtml(pk) {
+  const types = pk.types?.length ? pk.types
+    : (getTypes(pk.speciesId).length ? getTypes(pk.speciesId) : ['Normal']);
+  // Il parametro non va chiamato `t`: coprirebbe la funzione di traduzione
+  // usata qui sotto per il tooltip.
+  return types.map(type => {
+    const isMutation = pk._mutationType && type === pk._mutationType;
+    const style = isMutation
+      ? 'background:rgba(204,0,255,0.25); border:1px solid #cc00ff; color:#e9a6ff;'
+      : 'background:rgba(255,255,255,0.1);';
+    return `<span style="${style} padding:2px 6px; border-radius:4px;" title="${isMutation ? t('team.mutationTitle') : ''}">${isMutation ? '🧬 ' : ''}${esc(typeName(type))}</span>`;
+  }).join('');
+}
+
+export function setMutationType(idx, newType) {
+  const pk = currentRun.team[idx];
+  if (!pk) return;
+  const base = baseTypesOf(pk);
+
+  if (!newType) {
+    delete pk._mutated;
+    delete pk._mutationType;
+    delete pk._mutationPct;
+    pk.types = base;
+    return;
+  }
+
+  pk._mutated = true;
+  pk._mutationType = newType;
+  pk._mutationPct = pk._mutationPct ?? MUTATION_PCT;
+  pk.types = [...base, newType];
+}
+
+
+// Opzioni del menu strumento/megapietra di un Pokemon, filtrate dal testo
+// cercato. La ricerca guarda il nome mostrato, l'id scritto nel salvataggio e
+// tutti i nomi che il gioco conosce nelle sue lingue, cosi' funziona comunque
+// l'utente scriva.
+function itemOptionsHtml(pk, heldItemId, query) {
+  const terms = (id, ...extra) => searchTerms(...extra, id, itemSearchTerms(id));
+  const items = filterBySearch(Object.keys(HELD_ITEMS), query,
+    k => terms(k, itemName(k), HELD_ITEMS[k]?.en, HELD_ITEMS[k]?.it));
+
+  // Una pietra trasforma solo la sua specie (syncMegaForm controlla
+  // megaSpecies === speciesId), quindi si offrono solo quelle compatibili.
+  const stones = megaStonesFor(pk.speciesId);
+  const matching = (list) => filterBySearch(list, query,
+    s => terms(s.id, s.name, s.megaName));
+  // Le pietre vere e quelle ricostruite dalle forme senza pietra stanno in due
+  // gruppi distinti: le seconde funzionano ma non danno l'abilita' Mega, e
+  // l'utente deve poterlo vedere prima di sceglierle.
+  const realStones = matching(stones.filter(s => !s.synthetic));
+  const extraStones = matching(stones.filter(s => s.synthetic));
+
+  let html = '';
+  if (items.length) {
+    html += `<optgroup label="${esc(t('team.itemGroup'))}">`
+      + items
+          .map(k => `<option value="${k === 'nessuno' ? '' : k}"${heldItemId === k ? ' selected' : ''}>${esc(itemName(k))}</option>`)
+          .join('')
+      + '</optgroup>';
+  }
+  if (realStones.length) {
+    html += `<optgroup label="${esc(t('team.megaGroup'))}">`
+      + realStones
+          .map(s => `<option value="mega:${esc(s.id)}"${heldItemId === s.id ? ' selected' : ''}>💠 ${esc(s.name)}</option>`)
+          .join('')
+      + '</optgroup>';
+  }
+  if (extraStones.length) {
+    html += `<optgroup label="${esc(t('team.megaExtraGroup'))}">`
+      + extraStones
+          .map(s => `<option value="megax:${esc(s.id)}"${heldItemId === s.id ? ' selected' : ''}>💠 ${esc(s.name)}</option>`)
+          .join('')
+      + '</optgroup>';
+  }
+  return html || `<option value="">${esc(t('search.noResults', { q: query }))}</option>`;
+}
+
+// Un testo cercato per ogni slot della squadra. Restano fuori dalla funzione di
+// disegno perche' la scheda si ridisegna a ogni modifica.
+const itemQueries = {};
 
 export function renderTeam() {
   const el = document.getElementById('contentTeam');
@@ -10,38 +127,63 @@ export function renderTeam() {
   const team = currentRun.team || [];
 
   if (team.length === 0) {
-    el.innerHTML = `<div class="empty"><p>La tua squadra è vuota<br>Aggiungi dei Pokémon dalla scheda ➕</p></div>`;
+    el.innerHTML = `<div class="empty"><p>${t('team.empty')}</p></div>`;
     return;
   }
 
-  let html = '';
+  const notShiny = team.filter(pk => !pk.isShiny).length;
+  const notMaxTier = team.filter(pk => (pk.moveTier || 0) < MAX_MOVE_TIER).length;
+
+  let html = `
+    <button class="btn btn-primary w-100" id="btnHealTeam" style="background: linear-gradient(135deg, #00c853, #00e676); margin-bottom: 4px;">
+      ${t('team.healAll')}
+    </button>
+    <div class="field-row" style="margin-top:0;">
+      <button class="btn btn-accent" id="btnAllShiny" style="flex:1;" ${notShiny ? '' : 'disabled'}>
+        ${notShiny ? t('team.makeAllShiny', { n: notShiny }) : t('team.allShinyDone')}
+      </button>
+      <button class="btn btn-accent" id="btnAllMaxTier" style="flex:1;" ${notMaxTier ? '' : 'disabled'}>
+        ${notMaxTier ? t('team.maxAllTier', { n: notMaxTier }) : t('team.allTierDone')}
+      </button>
+    </div>`;
   team.forEach((pk, idx) => {
-    const sd = pk.baseStats || getSpeciesData(pk.speciesId);
-    const types = pk.types || ['Normal'];
+    const sd = pk.baseStats || getBaseStats(pk.speciesId) || getSpeciesData(pk.speciesId);
     const hpPct = pk.maxHp > 0 ? Math.round((pk.currentHp / pk.maxHp) * 100) : 0;
     const color = hpColor(hpPct);
-    const sprite = pk.spriteUrl || getSprite(pk.speciesId, pk.isShiny);
+    const sprite = resolveGameSprite(pk.spriteUrl) || getSprite(pk.speciesId, pk.isShiny);
     const displayName = pk.nickname || pk.name || POKEMON_NAMES[pk.speciesId] || `#${pk.speciesId}`;
 
-    const heldItemId = (pk.heldItem && typeof pk.heldItem === 'object') ? pk.heldItem.id : (pk.heldItem || '');
-    const heldItemDisplay = HELD_ITEMS[heldItemId] || heldItemId || 'Nessuno';
+    const held = (pk.heldItem && typeof pk.heldItem === 'object') ? pk.heldItem : null;
+    const heldItemId = held ? held.id : (pk.heldItem || '');
+    const heldItemDisplay = held?.isMegaStone
+      ? `💠 ${esc(held.name || heldItemId)}`
+      : (HELD_ITEMS[heldItemId] ? esc(itemName(heldItemId)) : esc(heldItemId || t('common.none')));
 
-    let itemOptions = Object.keys(HELD_ITEMS).map(k => `<option value="${k === 'nessuno' ? '' : k}" ${heldItemId === k ? 'selected' : ''}>${HELD_ITEMS[k]}</option>`).join('');
+    // Strumento e megapietra occupano lo stesso slot (heldItem): un unico menu
+    // diviso in gruppi evita di far credere che si possano avere entrambi.
+    // Una pietra trasforma solo la sua specie (syncMegaForm controlla
+    // megaSpecies === speciesId), quindi si offrono solo quelle compatibili.
+    const itemOptions = itemOptionsHtml(pk, heldItemId, itemQueries[idx] || '');
+    // Serve anche fuori dal menu, per la nota "nessuna pietra per questa specie".
+    const stones = megaStonesFor(pk.speciesId);
+
+    const mutationType = pk._mutationType || '';
+    const mutationOptions = `<option value="">${t('common.noneF')}</option>` + mutationOptionsFor(pk)
+      .map(type => `<option value="${type}"${type === mutationType ? ' selected' : ''}>${esc(typeName(type))}</option>`)
+      .join('');
 
     html += `
     <div class="poke-card ${pk.isShiny ? 'shiny' : ''}" data-idx="${idx}">
-      <button class="btn-remove" data-remove="${idx}" title="Rimuovi">✕</button>
-      <button class="btn-edit" data-edit="${idx}" title="Modifica Stats">✏️</button>
+      <button class="btn-remove" data-remove="${idx}" title="${t('team.remove')}">✕</button>
+      <button class="btn-edit" data-edit="${idx}" title="${t('team.editStats')}">✏️</button>
       <div class="poke-card-header">
         <div class="poke-sprite-wrapper" style="background: rgba(0,0,0,0.2); padding:4px; border-radius:8px;">
-          <img class="poke-sprite" src="${sprite}" alt="${displayName}" data-fallback="${getSprite(pk.speciesId, false)}">
+          <img class="poke-sprite" src="${sprite}" alt="${esc(displayName)}" data-fallback-url="${getSprite(pk.speciesId, false)}">
         </div>
         <div class="poke-info">
-          <div class="poke-name">#${pk.speciesId} ${displayName} ${pk.isShiny ? '✨' : ''} <span style="font-size:12px; font-weight:400; color:#aaa;">Lv.${pk.level}</span></div>
-          <div style="font-size:10px; margin-top:4px;">
-            ${types.map(t => `<span style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">${t}</span>`).join('')}
-          </div>
-          <div style="font-size:11px; margin-top:4px; color:#ffd700;">Item: ${heldItemDisplay}</div>
+          <div class="poke-name">#${pk.speciesId} ${esc(displayName)} ${pk.isShiny ? '✨' : ''} <span style="font-size:12px; font-weight:400; color:#aaa;">Lv.${pk.level}</span></div>
+          <div style="font-size:10px; margin-top:4px;" id="types_${idx}">${typeBadgesHtml(pk)}</div>
+          <div style="font-size:11px; margin-top:4px; color:#ffd700;">${t('team.item')}: ${esc(heldItemDisplay)}</div>
         </div>
       </div>
       
@@ -52,15 +194,15 @@ export function renderTeam() {
         <div style="width:${Math.min(100,hpPct)}%; background:${color}; height:100%; border-radius:4px;"></div>
       </div>
 
-      <!-- ADVANCED STATS PANEL (PRO) -->
+      <!-- ADVANCED STATS PANEL -->
       <div class="adv-stats-panel" id="advStats_${idx}">
-        <div class="pro-lockable">
-          <div style="font-size:11px; color:var(--gold); margin-bottom:8px; font-weight:700;">Modifica Numerica (PRO)</div>
+        <div>
+          <div style="font-size:11px; color:var(--gold); margin-bottom:8px; font-weight:700;">${t('team.numericEdit')}</div>
           
           <div class="field-row">
             <label class="field-label" style="width:50px;">Lv.</label>
             <input type="number" class="field-input bind-team" data-field="level" data-idx="${idx}" value="${pk.level}" style="width:60px;">
-            <label class="field-label" style="margin-left:auto;">✨ Shiny</label>
+            <label class="field-label" style="margin-left:auto;">${t('team.shiny')}</label>
             <input type="checkbox" class="bind-team" data-field="isShiny" data-idx="${idx}" ${pk.isShiny ? 'checked' : ''}>
           </div>
 
@@ -72,20 +214,38 @@ export function renderTeam() {
           </div>
 
           <div class="field-row">
-            <label class="field-label" style="width:50px;">Item</label>
-            <select class="field-input bind-team" data-field="heldItem" data-idx="${idx}" style="flex:1;">
+            <label class="field-label" style="width:50px;">${t('team.item')}</label>
+            <select class="field-input bind-team" data-field="heldItem" data-idx="${idx}"
+                    id="itemSelect_${idx}" style="flex:1;">
               ${itemOptions}
             </select>
-            <label class="field-label" style="margin-left:8px;">Mega:</label>
-            <input type="text" class="field-input bind-team" data-field="megaStone" data-idx="${idx}" value="${pk.megaStone || ''}" placeholder="es. mawilite" style="width:80px;">
           </div>
+          <div class="field-row" style="margin-top:-2px;">
+            <span style="width:50px;"></span>
+            <input type="search" class="field-input item-search" data-idx="${idx}"
+                   value="${esc(itemQueries[idx] || '')}" autocomplete="off" spellcheck="false"
+                   placeholder="${esc(t('search.items'))}"
+                   style="flex:1; font-size:10px; padding:4px 6px;">
+          </div>
+          ${stones.length ? '' : `
+          <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">
+            ${esc(megaStones === null ? t('team.megaUnavailable') : t('team.megaNoneForSpecies'))}
+          </div>`}
           
           <div class="field-row">
-            <label class="field-label" style="width:50px;">Tier</label>
+            <label class="field-label" style="width:50px;">${t('team.mutation')}</label>
+            <select class="field-input bind-team" data-field="_mutationType" data-idx="${idx}" style="flex:1;">
+              ${mutationOptions}
+            </select>
+            <span class="field-label" style="font-size:10px;">${t('team.mutationExtra')}</span>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" style="width:50px;">${t('team.tier')}</label>
             <select class="field-input bind-team" data-field="moveTier" data-idx="${idx}" style="flex:1;">
-              <option value="0" ${pk.moveTier===0?'selected':''}>Tier 0</option>
-              <option value="1" ${pk.moveTier===1?'selected':''}>Tier 1</option>
-              <option value="2" ${pk.moveTier===2?'selected':''}>Tier 2 (Max)</option>
+              <option value="0" ${pk.moveTier===0?'selected':''}>${t('team.tierN', { n: 0 })}</option>
+              <option value="1" ${pk.moveTier===1?'selected':''}>${t('team.tierN', { n: 1 })}</option>
+              <option value="2" ${pk.moveTier===2?'selected':''}>${t('team.tierMax', { n: 2 })}</option>
             </select>
           </div>
 
@@ -102,9 +262,66 @@ export function renderTeam() {
     </div>`;
   });
 
+  html += '<div class="section" id="traitsSection" style="margin-top:16px;"></div>';
+
   el.innerHTML = html;
+  renderTraits();
 
   // Events
+  // Si riscrive solo il menu di quello slot: ridisegnare tutta la squadra
+  // toglierebbe il fuoco alla casella a ogni lettera digitata.
+  el.querySelectorAll('.item-search').forEach(input => {
+    input.addEventListener('input', () => {
+      const idx = Number(input.dataset.idx);
+      itemQueries[idx] = input.value;
+      const pk = currentRun.team[idx];
+      const sel = document.getElementById(`itemSelect_${idx}`);
+      if (!pk || !sel) return;
+      const held = (pk.heldItem && typeof pk.heldItem === 'object') ? pk.heldItem.id : (pk.heldItem || '');
+      sel.innerHTML = itemOptionsHtml(pk, held, input.value);
+    });
+  });
+
+  document.getElementById('btnHealTeam')?.addEventListener('click', () => {
+    if (!currentRun || !currentRun.team) return;
+    currentRun.team.forEach(p => {
+      if (typeof p.maxHp === 'number') p.currentHp = p.maxHp;
+      if (p.status) p.status = 0;
+    });
+    autoSave();
+    renderTeam();
+    setStatus(t('team.healed'), 'ok');
+  });
+
+  document.getElementById('btnAllShiny')?.addEventListener('click', () => {
+    if (!currentRun?.team) return;
+    let n = 0;
+    currentRun.team.forEach(pk => {
+      if (pk.isShiny) return;
+      pk.isShiny = true;
+      pk.spriteUrl = spritePath(pk.speciesId, true);
+      n++;
+    });
+    if (!n) return;
+    autoSave();
+    renderTeam();
+    setStatus(t('team.shinyDone', { n }), 'ok');
+  });
+
+  document.getElementById('btnAllMaxTier')?.addEventListener('click', () => {
+    if (!currentRun?.team) return;
+    let n = 0;
+    currentRun.team.forEach(pk => {
+      if ((pk.moveTier || 0) >= MAX_MOVE_TIER) return;
+      pk.moveTier = MAX_MOVE_TIER;
+      n++;
+    });
+    if (!n) return;
+    autoSave();
+    renderTeam();
+    setStatus(t('team.tierDone', { n }), 'ok');
+  });
+
   document.querySelectorAll('[data-remove]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       currentRun.team.splice(parseInt(e.currentTarget.dataset.remove), 1);
@@ -115,7 +332,6 @@ export function renderTeam() {
 
   document.querySelectorAll('[data-edit]').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      if (!requirePro()) return;
       const idx = e.currentTarget.dataset.edit;
       const panel = document.getElementById(`advStats_${idx}`);
       panel.classList.toggle('active');
@@ -123,25 +339,61 @@ export function renderTeam() {
   });
 
   document.querySelectorAll('.bind-team').forEach(inp => {
-    inp.addEventListener('change', (e) => {
+    inp.addEventListener('change', async (e) => {
       const idx = e.currentTarget.dataset.idx;
       const field = e.currentTarget.dataset.field;
       let val = e.currentTarget.value;
       if (e.currentTarget.type === 'number') val = parseInt(val) || 0;
       if (e.currentTarget.type === 'checkbox') val = e.currentTarget.checked;
-      
+      // Il tier arriva da una <select>, quindi come stringa: il gioco lo salva
+      // come numero e scriverci "2" lascerebbe il salvataggio incoerente.
+      if (field === 'moveTier') val = parseInt(val, 10) || 0;
+
+      // Le megapietre arrivano dal menu con il prefisso "mega:": l'oggetto
+      // vero lo costruisce il gioco, cosi' ha i campi che syncMegaForm cerca.
+      if (field === 'heldItem' && /^megax?:/.test(String(val))) {
+        const synthetic = String(val).startsWith('megax:');
+        const stoneId = String(val).slice(synthetic ? 6 : 5);
+        // Per le forme senza pietra la definizione la mettiamo noi, ma
+        // l'oggetto lo costruisce comunque il gioco.
+        const def = synthetic
+          ? megaStonesFor(currentRun.team[idx].speciesId).find(x => x.id === stoneId)
+          : null;
+        const item = synthetic
+          ? (def ? await buildMegaStoneItemFromDef(def).catch(() => null) : null)
+          : await buildMegaStoneItem(stoneId).catch(() => null);
+        if (!item) {
+          setStatus(t('team.megaFailed'), 'err');
+          renderTeam();
+          return;
+        }
+        currentRun.team[idx].heldItem = item;
+        autoSave();
+        renderTeam();
+        setStatus(t('team.megaAssigned', { name: item.megaName || item.name }), 'ok');
+        return;
+      }
+
       if (field === 'heldItem') {
         if (val === '') {
           currentRun.team[idx].heldItem = null;
         } else {
-          currentRun.team[idx].heldItem = { id: val, name: HELD_ITEMS[val], desc: "Assegnato da PRO Editor", icon: "✨" };
+          currentRun.team[idx].heldItem = { id: val, name: itemGameName(val), desc: "Assegnato dall'Editor", icon: "✨" };
         }
+      } else if (field === '_mutationType') {
+        setMutationType(idx, val);
+        const badges = document.getElementById(`types_${idx}`);
+        if (badges) badges.innerHTML = typeBadgesHtml(currentRun.team[idx]);
       } else {
         currentRun.team[idx][field] = val;
       }
       
       if (field === 'isShiny') {
-        currentRun.team[idx].spriteUrl = getSprite(currentRun.team[idx].speciesId, val);
+        // Il gioco salva il percorso relativo, non l'URL assoluto.
+        const id = currentRun.team[idx].speciesId;
+        currentRun.team[idx].spriteUrl = val
+          ? `img/sprites/pokemon/shiny/${id}.png`
+          : `img/sprites/pokemon/${id}.png`;
       }
       
       autoSave();
@@ -154,7 +406,8 @@ export function renderTeam() {
       const field = e.currentTarget.dataset.field;
       const val = parseInt(e.currentTarget.value) || 0;
       if (!currentRun.team[idx].baseStats) {
-        currentRun.team[idx].baseStats = Object.assign({}, getSpeciesData(currentRun.team[idx].speciesId));
+        const id = currentRun.team[idx].speciesId;
+        currentRun.team[idx].baseStats = getBaseStats(id) || { ...getSpeciesData(id) };
       }
       currentRun.team[idx].baseStats[field] = val;
       autoSave();
@@ -172,119 +425,7 @@ export function renderTeam() {
 
 
 export function initTeamListeners() {
-  document.getElementById('contentTeam')?.addEventListener('click', (e) => {
-    // Delete btn
-    const delBtn = e.target.closest('.btn-delete');
-    if (delBtn) {
-      const idx = parseInt(delBtn.dataset.index);
-      currentRun.team.splice(idx, 1);
-      autoSave();
-      renderTeam();
-      return;
-    }
-    
-    // Edit btn
-    const editBtn = e.target.closest('.btn-edit');
-    if (editBtn) {
-      if (!requirePro()) return;
-      const idx = parseInt(editBtn.dataset.index);
-      const pkmn = currentRun.team[idx];
-      const pId = pkmn.species || 1;
-      const sData = getSpeciesData(pId);
-      
-      const detailsHtml = `
-        <div class="edit-stats-grid mb-3">
-          <div class="stat-group">
-            <label>Livello</label>
-            <input type="number" id="edit-level" value="${pkmn.level || 1}" min="1" max="100" class="form-control form-control-sm">
-          </div>
-          <div class="stat-group">
-            <label>Felicità</label>
-            <input type="number" id="edit-happiness" value="${pkmn.happiness || 0}" min="0" max="255" class="form-control form-control-sm">
-          </div>
-          <div class="stat-group">
-            <label>Natura</label>
-            <input type="number" id="edit-nature" value="${pkmn.nature || 0}" min="0" max="24" class="form-control form-control-sm">
-          </div>
-          <div class="stat-group">
-            <label>Abilità (Indice)</label>
-            <input type="number" id="edit-ability" value="${pkmn.abilityIndex || 0}" min="0" max="2" class="form-control form-control-sm">
-          </div>
-        </div>
-        
-        <h6>IVs (0-31)</h6>
-        <div class="edit-stats-grid mb-3">
-          <div class="stat-group"><label>HP</label><input type="number" id="iv-hp" value="${pkmn.ivs?.[0]||0}" min="0" max="31" class="form-control form-control-sm"></div>
-          <div class="stat-group"><label>Atk</label><input type="number" id="iv-atk" value="${pkmn.ivs?.[1]||0}" min="0" max="31" class="form-control form-control-sm"></div>
-          <div class="stat-group"><label>Def</label><input type="number" id="iv-def" value="${pkmn.ivs?.[2]||0}" min="0" max="31" class="form-control form-control-sm"></div>
-          <div class="stat-group"><label>SpAtk</label><input type="number" id="iv-spa" value="${pkmn.ivs?.[3]||0}" min="0" max="31" class="form-control form-control-sm"></div>
-          <div class="stat-group"><label>SpDef</label><input type="number" id="iv-spd" value="${pkmn.ivs?.[4]||0}" min="0" max="31" class="form-control form-control-sm"></div>
-          <div class="stat-group"><label>Spd</label><input type="number" id="iv-spe" value="${pkmn.ivs?.[5]||0}" min="0" max="31" class="form-control form-control-sm"></div>
-        </div>
-        
-        <div class="stat-group mt-2">
-          <label class="form-check-label d-flex align-items-center gap-2" style="cursor:pointer">
-            <input type="checkbox" id="edit-shiny" class="form-check-input" ${pkmn.shiny ? 'checked' : ''}> 
-            <span style="color:var(--gold)">Pokèmon Cromatico (Shiny)</span>
-          </label>
-        </div>
-      `;
-      
-      const modal = document.getElementById('editModal');
-      const title = document.getElementById('editModalTitle');
-      const body = document.getElementById('editModalBody');
-      const saveBtn = document.getElementById('btnSaveEdit');
-      
-      title.innerHTML = `<img src="${getSprite(pId, pkmn.shiny)}" style="width:32px;height:32px;image-rendering:pixelated"> Modifica Avanzata ${POKEMON_NAMES[pId] || 'Pokémon'}`;
-      body.innerHTML = detailsHtml;
-      
-      // Clear old listeners
-      const newSave = saveBtn.cloneNode(true);
-      saveBtn.parentNode.replaceChild(newSave, saveBtn);
-      
-      newSave.addEventListener('click', () => {
-        if (!pkmn.ivs) pkmn.ivs = [0,0,0,0,0,0];
-        pkmn.level = parseInt(document.getElementById('edit-level').value) || 1;
-        pkmn.happiness = parseInt(document.getElementById('edit-happiness').value) || 0;
-        pkmn.nature = parseInt(document.getElementById('edit-nature').value) || 0;
-        pkmn.abilityIndex = parseInt(document.getElementById('edit-ability').value) || 0;
-        
-        pkmn.ivs[0] = parseInt(document.getElementById('iv-hp').value) || 0;
-        pkmn.ivs[1] = parseInt(document.getElementById('iv-atk').value) || 0;
-        pkmn.ivs[2] = parseInt(document.getElementById('iv-def').value) || 0;
-        pkmn.ivs[3] = parseInt(document.getElementById('iv-spa').value) || 0;
-        pkmn.ivs[4] = parseInt(document.getElementById('iv-spd').value) || 0;
-        pkmn.ivs[5] = parseInt(document.getElementById('iv-spe').value) || 0;
-        
-        pkmn.shiny = document.getElementById('edit-shiny').checked;
-        
-        modal.classList.remove('active');
-        autoSave();
-        renderTeam();
-      });
-      
-      modal.classList.add('active');
-    }
-  });
-
-  document.getElementById('editModalClose')?.addEventListener('click', () => {
-    document.getElementById('editModal').classList.remove('active');
-  });
-
-  document.getElementById('btnHealTeam')?.addEventListener('click', () => {
-    if (!currentRun || !currentRun.team) return;
-    currentRun.team.forEach(p => {
-      const pId = p.species || 1;
-      const sData = getSpeciesData(pId);
-      const lvl = p.level || 1;
-      const hpIv = p.ivs ? (p.ivs[0] || 0) : 0;
-      const baseHp = sData.hp || 50;
-      const maxHp = Math.floor(0.01 * (2 * baseHp + hpIv + 0) * lvl) + lvl + 10;
-      p.hp = maxHp;
-      if (p.status) p.status = 0; // rimuovi paralisi/veleno ecc.
-    });
-    autoSave();
-    renderTeam();
-    setStatus('💚 Squadra curata completamente!', 'ok');
-  });
+  // Tutti gli handler della scheda Squadra (cura, rimuovi, modifica stat, bind
+  // dei campi) vengono agganciati in renderTeam() a ogni render, perché il
+  // contenuto è rigenerato dinamicamente. Non serve altro qui.
 }

@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Pokélike Editor — Gestor de saves",
+    "description": "Nome dell'estensione: browser, menu e titolo sul Web Store"
+  },
+  "extDescription": {
+    "message": "Edita o teu save local de pokelike.xyz: equipa, mochila, Pokédex, desbloqueios e backups. Grátis.",
+    "description": "Riepilogo mostrato nel browser e sul Web Store"
+  }
+}

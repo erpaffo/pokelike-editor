@@ -1,0 +1,6 @@
+# Fine riga LF nel repository, a prescindere dal sistema di chi clona.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.zip binary

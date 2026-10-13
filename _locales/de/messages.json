@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Pokélike Editor — Spielstand-Manager",
+    "description": "Nome dell'estensione: browser, menu e titolo sul Web Store"
+  },
+  "extDescription": {
+    "message": "Bearbeite deinen lokalen pokelike.xyz-Spielstand: Team, Beutel, Pokédex, Freischaltungen und Backups.",
+    "description": "Riepilogo mostrato nel browser e sul Web Store"
+  }
+}

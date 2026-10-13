@@ -1,0 +1,20 @@
+node_modules/
+backend/
+landing-page/
+dist/
+*.zip
+*.log
+.DS_Store
+
+# Dump di salvataggi reali: contengono poke_save_token e il nome utente.
+App_DATA.json
+*_DATA.json
+savedump*.json
+
+# Editor / sistema
+.vscode/
+.idea/
+Thumbs.db
+
+# Screenshot della vecchia versione a pagamento, non più rappresentativi
+store_assets/vecchi_screenshot_PRO/

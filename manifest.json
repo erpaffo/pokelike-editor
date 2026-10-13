@@ -1,30 +1,30 @@
 {
   "manifest_version": 3,
-  "name": "Pokélike Team Editor PRO",
-  "version": "2.0.0",
-  "description": "Premium ad-free editor for your Pokémon team in Pokélike.xyz",
-  "permissions": ["scripting", "activeTab", "storage"],
-  "host_permissions": ["https://pokelike.xyz/*"],
-  "background": {
-    "service_worker": "src/background.js"
-  },
+  "name": "__MSG_extName__",
+  "version": "2.2.1",
+  "description": "__MSG_extDescription__",
+  "default_locale": "it",
+  "minimum_chrome_version": "102",
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://pokelike.xyz/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
-  "content_scripts": [
-    {
-      "matches": ["https://pokelike.xyz/*"],
-      "js": ["src/content.js"],
-      "all_frames": false
-    }
-  ],
   "icons": {
     "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }

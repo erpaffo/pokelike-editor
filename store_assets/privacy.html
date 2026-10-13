@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Informativa sulla privacy — Pokélike Editor</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem;
+    font: 16px/1.65 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    color: #1c1e26; background: #fff;
+  }
+  h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 .35rem; }
+  h2 { font-size: 1.15rem; margin: 2.2rem 0 .6rem; padding-bottom: .3rem;
+       border-bottom: 1px solid #e4e6ec; }
+  .updated { color: #6b7280; font-size: .9rem; margin: 0 0 2rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93rem; }
+  th, td { border: 1px solid #e4e6ec; padding: .55rem .7rem; text-align: left; vertical-align: top; }
+  th { background: #f6f7f9; font-weight: 600; }
+  code { background: #f2f3f6; padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  ul { padding-left: 1.3rem; }
+  li { margin: .4rem 0; }
+  .note { background: #fff8e1; border-left: 4px solid #e0a800; padding: .8rem 1rem; border-radius: 4px; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e4e6ec;
+           color: #6b7280; font-size: .88rem; }
+  a { color: #0b57d0; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e6e8ee; background: #14161c; }
+    h2 { border-bottom-color: #2c303a; }
+    th, td { border-color: #2c303a; }
+    th { background: #1c1f27; }
+    code { background: #22252e; }
+    .note { background: #2a2413; border-left-color: #b8860b; }
+    footer { border-top-color: #2c303a; }
+    a { color: #8ab4f8; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Informativa sulla privacy — Pokélike Editor</h1>
+<p class="updated">Ultimo aggiornamento: 21 settembre 2026 — versione 2.2.0</p>
+
+<h2>In breve</h2>
+<p>
+  Pokélike Editor <strong>non raccoglie, non trasmette e non memorizza su server
+  alcun dato personale</strong>. Non ci sono account, analytics, tracker o
+  pubblicità. L'estensione non ha un server: tutto avviene nel tuo browser.
+</p>
+
+<h2>Quali dati vengono trattati e dove</h2>
+<table>
+  <thead>
+    <tr><th>Dato</th><th>Dove sta</th><th>Chi vi accede</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Salvataggio di gioco (<code>localStorage</code> di <code>pokelike.xyz</code>:
+          squadra, zaino, run, Pokédex, PokéDollari, statistiche)</td>
+      <td>Solo nel tuo browser, sul sito pokelike.xyz</td>
+      <td>Solo tu, quando apri il popup dell'estensione</td>
+    </tr>
+    <tr>
+      <td>Preferenze dell'estensione (lingua, tema)</td>
+      <td><code>localStorage</code> locale dell'estensione</td>
+      <td>Solo tu</td>
+    </tr>
+    <tr>
+      <td>Backup del salvataggio che crei tu</td>
+      <td><code>chrome.storage.local</code>, cioè sul tuo computer</td>
+      <td>Solo tu</td>
+    </tr>
+  </tbody>
+</table>
+<p>
+  L'estensione legge queste chiavi <strong>solo</strong> quando apri il suo popup
+  su una scheda <code>https://pokelike.xyz/*</code> e <strong>solo</strong> per
+  mostrartele e permetterti di modificarle. Le modifiche vengono riscritte nello
+  stesso <code>localStorage</code>. Nessuna copia viene inviata altrove.
+</p>
+
+<h2>Connessioni di rete</h2>
+<p>
+  L'unico host contattato è <strong><code>pokelike.xyz</code></strong>, e solo per
+  mostrare le immagini degli sprite — le stesse che la pagina del gioco sta già
+  caricando. Nessuna richiesta viene inviata, nessun dato identificativo viene
+  trasmesso.
+</p>
+<p>
+  Non vengono usati servizi di terze parti: nessuna API esterna, nessun font
+  remoto, nessuna CDN. Statistiche base e tipi dei Pokémon sono inclusi
+  nell'estensione e funzionano anche offline.
+</p>
+
+<h2>Backup</h2>
+<p>
+  I backup che crei restano su questo computer, dentro l'archivio locale
+  dell'estensione: non vengono caricati da nessuna parte. Vengono conservati gli
+  ultimi 5 e spariscono se disinstalli l'estensione o usi «Reset Completo Dati».
+</p>
+<p class="note">
+  Se esporti un backup su file, quel file contiene una copia integrale del
+  salvataggio, <strong>incluso il token del tuo account di gioco</strong>
+  (<code>poke_save_token</code>): conservalo come un dato personale e non
+  condividerlo.
+</p>
+
+<h2>Permessi richiesti e motivo</h2>
+<ul>
+  <li><code>activeTab</code> / <code>scripting</code> — leggere e scrivere il
+      <code>localStorage</code> della scheda pokelike.xyz attualmente aperta, solo
+      su tua azione. Se accendi i &laquo;Tratti forzati&raquo;, lo stesso permesso
+      registra uno script incluso nel pacchetto che, nella pagina del gioco,
+      sostituisce il risultato del calcolo dei tratti con i valori che hai scelto:
+      resta attivo finch&eacute; non spegni la funzione, non raccoglie nulla e non
+      contatta nessun server.</li>
+  <li><code>storage</code> — conservare localmente le tue preferenze e i backup
+      del salvataggio che crei tu.</li>
+  <li><code>host_permissions: https://pokelike.xyz/*</code> — limitare l'accesso
+      al solo sito del gioco.</li>
+</ul>
+
+<h2>Dati venduti o condivisi con terzi</h2>
+<p>
+  Nessuno. I dati non vengono mai venduti, ceduti o usati per scopi diversi dalla
+  funzione principale dell'estensione.
+</p>
+
+<h2>Cancellazione dei dati</h2>
+<p>
+  Impostazioni → «Reset Completo Dati» rimuove tutte le preferenze locali e i
+  backup. Disinstallando l'estensione si elimina tutto ciò che essa memorizza. Il
+  salvataggio di gioco resta di proprietà del sito pokelike.xyz.
+</p>
+
+<h2>Contatti</h2>
+<p>Per domande sulla privacy: <a href="mailto:paffetto@gmail.com">paffetto@gmail.com</a></p>
+
+<footer>
+  Progetto non ufficiale, non affiliato né approvato da pokelike.xyz né da
+  Nintendo, Game Freak o The Pokémon Company.
+</footer>
+
+</body>
+</html>

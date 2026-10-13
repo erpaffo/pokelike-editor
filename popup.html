@@ -1,12 +1,8 @@
 <!doctype html>
-<html lang="es">
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <title>Pokélike Editor PRO</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <title>Pokélike Editor</title>
     <style>
       :root {
         --red: #e63946;
@@ -26,6 +22,37 @@
         --radius-md: 12px;
         --radius-lg: 16px;
       }
+      
+      [data-theme="solar"] {
+        --bg: #f8f9fa;
+        --surface: #ffffff;
+        --card: #e9ecef;
+        --text: #212529;
+        --text-muted: #6c757d;
+        --border: rgba(0, 0, 0, 0.1);
+        --accent: #0056b3;
+      }
+
+      [data-theme="cyberpunk"] {
+        --bg: #0a001a;
+        --surface: #1c0033;
+        --card: #32004d;
+        --text: #00ffff;
+        --text-muted: #ff00ff;
+        --accent: #ff00ff;
+        --border: rgba(255, 0, 255, 0.3);
+      }
+
+      [data-theme="gameboy"] {
+        --bg: #8bac0f;
+        --surface: #9bbc0f;
+        --card: #306230;
+        --text: #0f380f;
+        --text-muted: #306230;
+        --accent: #0f380f;
+        --border: rgba(15, 56, 15, 0.3);
+        --gold: #0f380f;
+      }
 
       * {
         box-sizing: border-box;
@@ -33,7 +60,7 @@
         padding: 0;
       }
       body {
-        width: 480px;
+        width: 580px;
         height: 600px;
         display: flex;
         flex-direction: column;
@@ -44,7 +71,8 @@
           transparent 50%
         );
         color: var(--text);
-        font-family: "Inter", sans-serif;
+        /* Font di sistema: evita una richiesta a Google Fonts a ogni apertura. */
+        font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
         font-size: 13px;
         overflow: hidden;
       }
@@ -101,14 +129,26 @@
       }
       .tab {
         flex: 1;
-        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 3px;
+        min-height: 54px;
+        /* min-width:0 e il troncamento evitano che le lingue con parole lunghe
+           (tedesco, portoghese) facciano sforare la barra. */
+        min-width: 0;
+        padding: 12px 4px;
         text-align: center;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 600;
         color: var(--text-muted);
         border-bottom: 2px solid transparent;
         position: relative;
+        /* Il testo va a capo sotto l'emoji: senza questo le etichette lunghe
+           starebbero su una riga sola e verrebbero troncate. */
+        overflow-wrap: anywhere;
       }
       .tab::after {
         content: "";
@@ -123,6 +163,10 @@
       }
       .tab.active {
         color: var(--text);
+      }
+      .tab-icon {
+        font-size: 14px;
+        line-height: 1;
       }
       .tab.active::after {
         width: 100%;
@@ -228,13 +272,175 @@
         border-color: rgba(255, 255, 255, 0.3);
         color: var(--text);
       }
-      .btn-pro {
+      .btn-accent {
         background: linear-gradient(135deg, #2a2d45, #1a1d2e);
         border: 1px solid var(--gold-dark);
         color: var(--gold);
       }
-      .btn-pro:hover {
+      .btn-accent:hover {
         box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+      }
+      .btn-danger {
+        background: linear-gradient(135deg, var(--red-dark), var(--red));
+        color: #fff;
+      }
+      .btn-gold {
+        background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+        color: #1a1d2e;
+      }
+      .btn[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .btn[disabled]:active {
+        transform: none;
+      }
+      .btn-sm {
+        padding: 5px 10px;
+        font-size: 11px;
+      }
+
+      /* ── Dialogo modale ── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 50;
+      }
+      .modal-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        max-width: 100%;
+        max-height: 100%;
+        overflow-y: auto;
+      }
+      .modal-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--gold);
+        margin-bottom: 8px;
+      }
+      .modal-text {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        margin-bottom: 14px;
+      }
+      .modal-choice {
+        width: 100%;
+        text-align: left;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 10px 12px;
+        cursor: pointer;
+        color: var(--text);
+        font-family: inherit;
+        margin-bottom: 8px;
+      }
+      .modal-choice:hover {
+        border-color: var(--gold-dark);
+      }
+      .modal-choice b {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 3px;
+      }
+      .modal-choice span {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.45;
+      }
+      .modal-foot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      /* ── Sblocchi / Platino ── */
+      .goal {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .goal:last-child {
+        border-bottom: none;
+      }
+      .goal-main {
+        flex: 1;
+        min-width: 0;
+      }
+      .goal-label {
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .goal-value {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 3px;
+      }
+      .goal-bar {
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.08);
+        margin-top: 5px;
+        overflow: hidden;
+      }
+      .goal-bar > i {
+        display: block;
+        height: 100%;
+        background: var(--green);
+        border-radius: 2px;
+      }
+      .goal.done .goal-bar > i {
+        background: var(--gold);
+      }
+      .goal-actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .ach-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+        gap: 6px;
+        max-height: 210px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+      .ach-chip {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 6px;
+        font-size: 10px;
+        text-align: center;
+        opacity: 0.4;
+      }
+      .ach-chip.unlocked {
+        opacity: 1;
+        border-color: var(--gold-dark);
+        color: var(--gold);
+      }
+      .ach-chip b {
+        display: block;
+        font-size: 15px;
+        margin-bottom: 2px;
+        font-weight: 400;
       }
 
       /* ── Forms ── */
@@ -263,57 +469,6 @@
       .field-input:focus {
         outline: none;
         border-color: var(--accent);
-      }
-
-      /* ── Modals & PRO ── */
-      .pro-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(15, 17, 26, 0.85);
-        backdrop-filter: blur(8px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 100;
-      }
-      .pro-overlay.active {
-        display: flex;
-      }
-      .pro-modal {
-        background: var(--surface);
-        border: 1px solid var(--gold-dark);
-        padding: 24px;
-        border-radius: var(--radius-lg);
-        text-align: center;
-        width: 90%;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      }
-      .pro-modal h3 {
-        color: var(--gold);
-        font-size: 18px;
-        margin-bottom: 8px;
-      }
-      .pro-modal p {
-        color: var(--text-muted);
-        font-size: 12px;
-        margin-bottom: 16px;
-      }
-      .pro-error {
-        color: var(--red-light);
-        font-size: 11px;
-        margin-top: 8px;
-        height: 14px;
-      }
-      .pro-lockable {
-        transition: filter 0.3s;
-      }
-      .locked .pro-lockable {
-        filter: blur(4px);
-        pointer-events: none;
-        user-select: none;
       }
 
       /* ── Team Tab ── */
@@ -462,66 +617,63 @@
       <div class="header-icon">✨</div>
       <div>
         <h1>Pokélike Editor</h1>
-        <div class="header-sub">Advanced Save Manager</div>
+        <div class="header-sub" data-i18n="app.subtitle">Advanced Save Manager</div>
       </div>
-      <button class="btn-reload" id="btnReload">🔄 Sync</button>
+      <button class="btn-reload" id="btnReload" data-i18n="header.sync" data-i18n-title="header.syncTitle">🔄 Sync</button>
     </div>
 
     <div class="tabs">
-      <div class="tab active" data-tab="team">🏆 Squadra</div>
-      <div class="tab" data-tab="add">➕ Aggiungi</div>
-      <div class="tab" data-tab="run">🗺️ Run</div>
-      <div class="tab" data-tab="bag">🎒 Zaino</div>
-      <div class="tab" data-tab="mega">💠 Sblocchi</div>
-      <div class="tab" data-tab="pro" style="color: #ffd700; font-weight: 800;">👑 PRO</div>
+      <div class="tab active" data-tab="team"><span class="tab-icon">🏆</span><span data-i18n="tab.team">Squadra</span></div>
+      <div class="tab" data-tab="add"><span class="tab-icon">➕</span><span data-i18n="tab.add">Aggiungi</span></div>
+      <div class="tab" data-tab="run"><span class="tab-icon">🗺️</span><span data-i18n="tab.run">Run</span></div>
+      <div class="tab" data-tab="bag"><span class="tab-icon">🎒</span><span data-i18n="tab.bag">Zaino</span></div>
+      <div class="tab" data-tab="vitamins"><span class="tab-icon">💊</span><span data-i18n="tab.vitamins">Vitamine</span></div>
+      <div class="tab" data-tab="mega"><span class="tab-icon">💠</span><span data-i18n="tab.unlocks">Sblocchi</span></div>
+      <div class="tab" data-tab="donate" style="color: #ffd700;"><span class="tab-icon">❤️</span><span data-i18n="tab.donate">Dona</span></div>
+      <div class="tab" data-tab="settings"><span class="tab-icon">⚙️</span><span data-i18n="tab.settings">Opzioni</span></div>
     </div>
 
     <div class="scroll-region">
-      <!-- TAB: PRO -->
-      <div class="content" id="contentPro">
-        <div class="section">
-          <div class="section-title" style="color: #ffd700; border-bottom-color: rgba(255, 215, 0, 0.2); display: flex; justify-content: space-between; align-items: center;">
-            <span><i class="fas fa-crown"></i> Gestione Licenza PRO</span>
-            <span id="proStatusBadge" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; background: rgba(255,77,109,0.2); color: #ff4d6d; border: 1px solid #ff4d6d;">Stato: Non Attivo</span>
-          </div>
-          <p style="color: #8b92a5; margin-bottom: 12px; font-size: 12px; line-height: 1.4;">
-            Sblocca tutto il potenziale: Editor Avanzato Statistiche (IV, EV, Felicità), 
-            Modifica Medaglie e Mappe, Completamento Pokédex e iniezione di Leggendari.
+      <!-- TAB: DONA -->
+      <div class="content" id="contentDonate">
+        <div class="section" style="text-align: center; padding: 28px 20px;">
+          <div style="font-size: 40px; margin-bottom: 12px;">❤️</div>
+          <h3 style="color: #fff; margin-bottom: 8px;" data-i18n="donate.title">Pokélike Editor è gratis. Per sempre.</h3>
+          <p style="color: #8b92a5; font-size: 12px; line-height: 1.5; margin-bottom: 20px;" data-i18n="donate.text">
+            Se l'estensione ti è utile e vuoi supportare il tempo speso a svilupparla e mantenerla,
+            una piccola donazione libera è sempre apprezzata — ma non è mai richiesta.
           </p>
+          <button id="btnDonate" class="btn w-100" style="font-weight: bold; background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; border: none;" data-i18n="donate.button">
+            ☕ Offrimi un caffè
+          </button>
 
-          <div id="proActiveState" style="display: none; text-align: center; padding: 20px 0;">
-            <div style="font-size: 40px; color: #00e676; margin-bottom: 10px;">✅</div>
-            <h3 style="color: #fff; margin-bottom: 5px;">Licenza Attiva!</h3>
-            <p style="color: #8b92a5;">Grazie per il supporto. Tutte le funzionalità sono sbloccate.</p>
+          <div style="border-top: 1px solid var(--border); margin-top: 22px; padding-top: 22px;">
+            <div style="font-size: 30px; margin-bottom: 10px;">⭐</div>
+            <h3 style="color: #fff; margin-bottom: 8px; font-size: 15px;" data-i18n="donate.rateTitle">Lascia una recensione</h3>
+            <p style="color: #8b92a5; font-size: 12px; line-height: 1.5; margin-bottom: 16px;" data-i18n="donate.rateText">
+              Anche gratis puoi dare una mano: una valutazione sul Chrome Web Store
+              aiuta altri giocatori a trovare l'estensione. Bastano dieci secondi.
+            </p>
+            <button id="btnRate" class="btn btn-accent w-100" data-i18n="donate.rateButton">
+              ⭐ Valuta sul Chrome Web Store
+            </button>
+            <p id="rateHint" style="font-size: 10px; color: var(--text-muted); margin-top: 8px;" hidden></p>
           </div>
-
-            <div id="proUnlockState">
-              <button id="btnBuyPro" class="btn btn-warning w-100 mb-3" style="font-weight: bold; background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; border: none;">
-                Acquista Licenza PRO (Legata a questo Account)
-              </button>
-              
-              <label class="field-label mb-1">Hai già un codice?</label>
-              <div class="input-group mb-2">
-                <input type="text" id="licenseKeyInput" class="form-control bg-dark text-light border-secondary" placeholder="PRO-XXXX-XXXX">
-                <button class="btn btn-outline-warning" id="btnVerifyLicense">Attiva</button>
-              </div>
-              <div id="licenseStatus" style="font-size: 11px; text-align: center; min-height: 16px;"></div>
-            </div>
         </div>
       </div>
 
       <!-- TAB: TEAM -->
       <div class="content active" id="contentTeam">
-        <div class="empty"><p>Sincronizzazione in corso...</p></div>
+        <div class="empty"><p data-i18n="status.syncing">Sincronizzazione in corso...</p></div>
       </div>
 
       <!-- TAB: RUN -->
       <div class="content" id="contentRun">
           <div class="section">
-            <div class="section-title">💰 Finanze & Base</div>
+            <div class="section-title" data-i18n="run.finance">💰 Finanze &amp; Base</div>
             <div class="field-row">
               <label class="field-label" style="width: 100px"
-                >Pokédollars:</label
+                 data-i18n="run.pokedollarsLabel">Pokédollars:</label
               >
               <input
                 type="number"
@@ -538,27 +690,27 @@
                 margin-top: 8px;
               "
             >
-              <button class="btn btn-pro btn-money" data-amt="1000">
+              <button class="btn btn-accent btn-money" data-amt="1000">
                 + 1.000 ₽
               </button>
-              <button class="btn btn-pro btn-money" data-amt="5000">
+              <button class="btn btn-accent btn-money" data-amt="5000">
                 + 5.000 ₽
               </button>
-              <button class="btn btn-pro btn-money" data-amt="10000">
+              <button class="btn btn-accent btn-money" data-amt="10000">
                 + 10.000 ₽
               </button>
-              <button class="btn btn-pro btn-money" data-amt="-1000">
+              <button class="btn btn-accent btn-money" data-amt="-1000">
                 - 1.000 ₽
               </button>
-              <button class="btn btn-pro btn-money" data-amt="-5000">
+              <button class="btn btn-accent btn-money" data-amt="-5000">
                 - 5.000 ₽
               </button>
-              <button class="btn btn-pro btn-money" data-amt="-10000">
+              <button class="btn btn-accent btn-money" data-amt="-10000">
                 - 10.000 ₽
               </button>
             </div>
             <div class="field-row" style="margin-top: 16px">
-              <label class="field-label" style="width: 100px">Medaglie: <i class="fas fa-lock pro-lock-icon" style="color: #ffd700; opacity: 0.5;"></i></label>
+              <label class="field-label" style="width: 100px" data-i18n="run.badgesLabel">Medaglie:</label>
               <input
                 type="number"
                 id="runBadges"
@@ -569,9 +721,9 @@
           </div>
 
           <div class="section">
-            <div class="section-title">🗺️ Progressione</div>
+            <div class="section-title" data-i18n="run.progression">🗺️ Progressione</div>
             <div class="field-row">
-              <label class="field-label" style="width: 100px">Mappa N.:</label>
+              <label class="field-label" style="width: 100px" data-i18n="run.mapNumLabel">Mappa N.:</label>
               <input
                 type="number"
                 id="runMap"
@@ -588,8 +740,7 @@
                   width: 100%;
                 "
               >
-                <input type="checkbox" id="runNuzlocke" /> Modalità Nuzlocke
-                (Morte Permanente)
+                <input type="checkbox" id="runNuzlocke" /> <span data-i18n="run.nuzlocke">Modalità Nuzlocke (Morte Permanente)</span>
               </label>
             </div>
             <div class="field-row">
@@ -601,12 +752,12 @@
                   width: 100%;
                 "
               >
-                <input type="checkbox" id="runEndless" /> Modalità Endless
+                <input type="checkbox" id="runEndless" /> <span data-i18n="run.endless">Modalità Endless</span>
               </label>
             </div>
             <div class="field-row" id="endlessStageRow" style="display: none">
               <label class="field-label" style="width: 100px"
-                >Ondata Endless:</label
+                 data-i18n="run.endlessWaveLabel">Ondata Endless:</label
               >
               <input
                 type="number"
@@ -615,189 +766,84 @@
                 style="flex: 1"
               />
             </div>
+
+          <!-- OGGETTI PASSIVI (contenuto generato da js/tabs/run.js) -->
+          <div class="section" id="passivesSection" style="margin-top:16px;"></div>
+
+          <!-- MAP EDITOR SECTION -->
+          <div class="section" style="margin-top:16px;">
+              <div class="section-title" style="color:var(--gold); display:flex; justify-content:space-between; align-items:center;">
+                <span data-i18n="run.mapEditor">🗺️ Editor Mappa</span>
+                <span style="font-size:10px; font-weight:normal; color:#8b92a5;" data-i18n="run.editNodes">Modifica i Nodi</span>
+              </div>
+              <div id="mapEditorContainer" style="max-height: 300px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:#8b92a5; font-size:12px; text-align:center; padding:20px;" data-i18n="run.noMap">Nessuna mappa caricata.</div>
+              </div>
+              </div>
+            </div>
           </div>
-        </div>
 
       <!-- TAB: BAG -->
       <div class="content" id="contentBag">
           <div class="section">
-            <div class="section-title">➕ Genera Strumento</div>
+            <div class="section-title" data-i18n="bag.generate">➕ Genera Strumento</div>
+            <p style="font-size:11px; color:#8b92a5; margin-bottom:10px;" data-i18n="bag.hint">
+              Lo zaino ha 10 slot e tiene un solo esemplare per strumento: gli
+              strumenti già posseduti non compaiono nell'elenco.
+            </p>
+            <div style="position:relative; margin-bottom:8px;">
+              <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%);
+                           font-size:12px; opacity:0.6; pointer-events:none;">&#128270;</span>
+              <input type="search" id="bagItemSearch" class="field-input" autocomplete="off"
+                     spellcheck="false" data-i18n-placeholder="search.items"
+                     data-i18n-title="search.hint"
+                     placeholder="Cerca uno strumento o una megapietra..."
+                     style="width:100%; padding-left:26px; font-size:11px;">
+            </div>
             <div class="field-row">
-              <select id="bagItemSelect" class="field-input" style="flex: 1">
-                <option value="rare_candy">Caramella Rara</option>
-                <option value="tm_normal">TM (Livello Mosse)</option>
-                <option value="moon_stone">Pietra Lunare</option>
-                <option value="lucky_egg">Fortunuovo</option>
-                <option value="choice_band">Bendascelta</option>
-                <option value="rocky_helmet">Bitorzolelmo</option>
-                <option value="leftovers">Avanzi</option>
-                <option value="charcoal">Carbonella</option>
-                <option value="miracle_seed">Miracolseme</option>
-                <option value="hard_stone">Pietradura</option>
-                <option value="silk_scarf">Sciarpa Seta</option>
-                <option value="pixie_plate">Lastrafata</option>
-                <option value="mystic_water">Acquamagica</option>
-                <option value="magnet">Calamita</option>
-                <option value="black_belt">Cinturanera</option>
-                <option value="poison_barb">Velenaculeo</option>
-                <option value="soft_sand">Sabbia Soffice</option>
-                <option value="sharp_beak">Beccaffilato</option>
-                <option value="twisted_spoon">Cucchiaio Torto</option>
-                <option value="silver_powder">Argentopolvere</option>
-                <option value="spell_tag">Spettrotarga</option>
-                <option value="dragon_fang">Dentedidrago</option>
-                <option value="black_glasses">Occhialineri</option>
-                <option value="metal_coat">Metalcoperta</option>
-                <option value="never_melt_ice">Gelomai</option>
-              </select>
-              <button class="btn btn-pro" id="btnInjectBag">Aggiungi</button>
+              <select id="bagItemSelect" class="field-input" style="flex: 1"></select>
+              <button class="btn btn-accent" id="btnInjectBag" data-i18n="common.add">Aggiungi</button>
             </div>
           </div>
 
           <div class="section">
-            <div class="section-title">🎒 Il Tuo Zaino</div>
+            <div class="section-title" style="color:var(--gold);" data-i18n="bag.quickFill">💎 Riempimento Rapido</div>
+            <p style="font-size:11px; color:#8b92a5; margin-bottom:10px;" data-i18n="bag.quickFillHint">Riempi gli slot liberi con gli strumenti che non hai ancora.</p>
+            <button class="btn w-100" id="btnFillBag" style="background: linear-gradient(135deg, #cc00ff, #5500ff); color:#fff;" data-i18n="bag.fillFree">
+              ✨ Riempi gli Slot Liberi
+            </button>
+          </div>
+
+          <div class="section">
+            <div class="section-title" style="display:flex; align-items:center; justify-content:space-between;">
+              <span data-i18n="bag.yours">🎒 Il Tuo Zaino</span>
+              <span id="bagCounter" style="font-size:11px; font-weight:500; color:#8b92a5;"></span>
+            </div>
             <div
               id="bagList"
               style="display: flex; flex-direction: column; gap: 8px"
             ></div>
+            <button class="btn btn-ghost w-100" id="btnClearBag" style="margin-top: 10px; font-size: 11px;" data-i18n="bag.clear">
+              🗑️ Svuota Zaino
+            </button>
           </div>
         </div>
 
-      <!-- TAB: MEGA -->
-      <div class="content" id="contentMega">
-          <div class="section">
-            <div class="section-title">💠 Sblocco Mega Evoluzioni <i class="fas fa-lock pro-lock-icon" style="color: #ffd700; opacity: 0.5; margin-left: auto;"></i></div>
-            <p style="font-size: 11px; color: #8b92a5; margin-bottom: 12px">
-              Il gioco sblocca i Bracciali Mega vincendo le sfide con il Pokémon
-              base (MVP). Qui puoi iniettare vittorie fittizie per sbloccare le
-              pietre istantaneamente.
-            </p>
+      <!-- TAB: SBLOCCHI (contenuto generato da js/tabs/mega.js) -->
+      <div class="content" id="contentMega"></div>
 
-            <div class="field-row">
-              <label class="field-label" style="width: 100px"
-                >Seleziona Mega:</label
-              >
-              <select
-                id="megaUnlockSelect"
-                class="field-input"
-                style="flex: 1"
-              ></select>
-            </div>
-            <button
-              class="btn btn-pro w-100"
-              id="btnUnlockSingleMega"
-              style="margin-top: 12px"
-            >
-              Sblocca Questa Mega
-            </button>
-
-            <hr
-              style="
-                border: none;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                margin: 20px 0;
-              "
-            />
-
-            <button
-              class="btn btn-primary w-100"
-              id="btnUnlockAllMegas"
-              style="background: linear-gradient(135deg, #cc00ff, #5500ff)"
-            >
-              ✨ SBLOCCA TUTTE LE MEGA ✨
-            </button>
-          </div>
-
-          <div class="section" style="margin-top: 16px">
-            <button id="btnUnlockAllStarters"
-              class="btn btn-warning w-100 mb-2 pro-feature"
-              disabled
-            >
-              <i class="fas fa-star me-2"></i>Sblocca Tutti gli Starter Base
-              <i class="fas fa-lock float-end mt-1" style="opacity: 0.5"></i>
-            </button>
-
-            <button
-              id="btnUnlockLegendaries"
-              class="btn btn-primary w-100 mb-2 pro-feature"
-              disabled
-            >
-              <i class="fas fa-dragon me-2"></i>Aggiungi Leggendari (Uovo)
-              <i class="fas fa-lock float-end mt-1" style="opacity: 0.5"></i>
-            </button>
-
-            <button
-              id="btnUnlockLegendariesShiny"
-              class="btn btn-info w-100 mb-2 pro-feature text-white"
-              disabled
-            >
-              <i class="fas fa-sparkles me-2"></i>Aggiungi Leggendari Shiny
-              (Uovo)
-              <i class="fas fa-lock float-end mt-1" style="opacity: 0.5"></i>
-            </button>
-
-            <div class="pro-feature-container mt-3" style="position: relative">
-              <div
-                class="pro-overlay"
-                style="
-                  position: absolute;
-                  top: 0;
-                  left: 0;
-                  right: 0;
-                  bottom: 0;
-                  background: rgba(0, 0, 0, 0.5);
-                  z-index: 10;
-                  border-radius: 8px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                "
-              >
-                <i
-                  class="fas fa-lock"
-                  style="font-size: 24px; color: rgba(255, 255, 255, 0.3)"
-                ></i>
-              </div>
-              <div class="section-title">📚 Sblocco Pokédex Regionale</div>
-              <select
-                id="dexRegionSelect"
-                class="form-select bg-dark text-light border-secondary mb-2"
-                style="font-size: 13px"
-              >
-                <option value="ALL">Tutte le Regioni (Globale)</option>
-                <option value="1">Kanto (Gen 1)</option>
-                <option value="2">Johto (Gen 2)</option>
-                <option value="3">Hoenn (Gen 3)</option>
-                <option value="4">Sinnoh (Gen 4)</option>
-                <option value="5">Unova (Gen 5)</option>
-                <option value="6">Kalos (Gen 6)</option>
-              </select>
-              <div class="d-flex gap-2">
-                <button
-                  id="btnCompleteDex"
-                  class="btn btn-danger flex-fill pro-feature"
-                  disabled
-                >
-                  <i class="fas fa-book me-1"></i>Pokédex
-                </button>
-                <button
-                  id="btnCompleteShinyDex"
-                  class="btn btn-info text-white flex-fill pro-feature"
-                  disabled
-                >
-                  <i class="fas fa-sparkles me-1"></i>Shiny Dex
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- TAB: VITAMINE (contenuto generato da js/tabs/vitamins.js) -->
+      <div class="content" id="contentVitamins"></div>
 
       <!-- TAB: ADD -->
       <div class="content" id="contentAdd"></div>
+
+      <!-- TAB: SETTINGS -->
+      <div class="content" id="contentSettings"></div>
     </div>
 
     <div class="footer">
-      <span class="status" id="statusBar">In attesa di connessione...</span>
+      <span class="status" id="statusBar" data-i18n="status.waiting">In attesa di connessione...</span>
     </div>
 
     <script src="pokemonData.js"></script>
